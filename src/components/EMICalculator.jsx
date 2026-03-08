@@ -25,6 +25,17 @@ export default function EMICalculator({ defaultPrice = 0 }) {
             padding: '28px',
             color: '#fff',
         }}>
+            <style>{`
+                .emi-slider::-webkit-slider-thumb {
+                    background: #000 !important;
+                    border: 2px solid #fff !important;
+                    box-shadow: 0 2px 6px rgba(0,0,0,0.4) !important;
+                }
+                .emi-slider::-moz-range-thumb {
+                    background: #000 !important;
+                    border: 2px solid #fff !important;
+                }
+            `}</style>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px' }}>
                 <FiDollarSign size={22} />
                 <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.2rem' }}>EMI Calculator</h3>
@@ -39,6 +50,7 @@ export default function EMICalculator({ defaultPrice = 0 }) {
                     </div>
                     <input type="range" min={50000} max={10000000} step={10000}
                         value={loanAmount} onChange={e => setLoanAmount(Number(e.target.value))}
+                        className="emi-slider"
                         style={{ background: 'rgba(255,255,255,0.3)' }} />
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', opacity: 0.75, marginTop: '4px' }}>
                         <span>₹50K</span><span>₹1 Cr</span>
@@ -53,6 +65,7 @@ export default function EMICalculator({ defaultPrice = 0 }) {
                     </div>
                     <input type="range" min={5} max={20} step={0.1}
                         value={rate} onChange={e => setRate(Number(e.target.value))}
+                        className="emi-slider"
                         style={{ background: 'rgba(255,255,255,0.3)' }} />
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', opacity: 0.75, marginTop: '4px' }}>
                         <span>5%</span><span>20%</span>

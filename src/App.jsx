@@ -3,6 +3,7 @@ import { StoreProvider } from './store/StoreContext';
 import { ToastProvider } from './components/ToastProvider';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import ScrollToTop from './components/ScrollToTop';
 
 // Public pages
 import HomePage from './pages/HomePage';
@@ -10,6 +11,9 @@ import SearchPage from './pages/SearchPage';
 import CarDetailPage from './pages/CarDetailPage';
 import DealerSubmitPage from './pages/DealerSubmitPage';
 import AboutPage from './pages/AboutPage';
+import TermsPage from './pages/TermsPage';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
+import CustomerProfilePage from './pages/CustomerProfilePage';
 
 // Admin pages
 import AdminLoginPage from './pages/admin/AdminLoginPage';
@@ -20,6 +24,9 @@ import AdminReviewPage from './pages/admin/AdminReviewPage';
 import AdminBrandsPage from './pages/admin/AdminBrandsPage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
 import AdminSettingsPage from './pages/admin/AdminSettingsPage';
+import AdminAppointmentsPage from './pages/admin/AdminAppointmentsPage';
+import AdminDealershipsPage from './pages/admin/AdminDealershipsPage';
+import AdminMessagesPage from './pages/admin/AdminMessagesPage';
 
 // Admin layout wrapper (no nav/footer)
 function AdminLayout({ children }) {
@@ -42,6 +49,7 @@ export default function App() {
     <StoreProvider>
       <ToastProvider>
         <BrowserRouter>
+          <ScrollToTop />
           <Routes>
             {/* Public routes */}
             <Route path="/" element={<PublicLayout><HomePage /></PublicLayout>} />
@@ -49,6 +57,9 @@ export default function App() {
             <Route path="/car/:id" element={<PublicLayout><CarDetailPage /></PublicLayout>} />
             <Route path="/dealer-submit" element={<PublicLayout><DealerSubmitPage /></PublicLayout>} />
             <Route path="/about" element={<PublicLayout><AboutPage /></PublicLayout>} />
+            <Route path="/terms" element={<PublicLayout><TermsPage /></PublicLayout>} />
+            <Route path="/privacy" element={<PublicLayout><PrivacyPolicyPage /></PublicLayout>} />
+            <Route path="/profile" element={<PublicLayout><CustomerProfilePage /></PublicLayout>} />
 
             {/* Admin routes — full page without nav */}
             <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
@@ -61,6 +72,9 @@ export default function App() {
             <Route path="/admin/brands" element={<AdminBrandsPage />} />
             <Route path="/admin/users" element={<AdminUsersPage />} />
             <Route path="/admin/settings" element={<AdminSettingsPage />} />
+            <Route path="/admin/appointments" element={<AdminAppointmentsPage />} />
+            <Route path="/admin/dealerships" element={<AdminDealershipsPage />} />
+            <Route path="/admin/messages" element={<AdminMessagesPage />} />
 
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />

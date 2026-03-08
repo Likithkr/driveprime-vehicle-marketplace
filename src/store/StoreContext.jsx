@@ -1,14 +1,25 @@
-import { createContext, useContext, useReducer, useEffect } from 'react';
+import { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
 import { api } from '../lib/api';
+import { useSSE } from '../hooks/useSSE';
 
 const StoreContext = createContext(null);
+
+const getInitialAuth = () => {
+    try {
+        const raw = localStorage.getItem('dp_admin');
+        return raw ? Boolean(JSON.parse(raw)?.token) : false;
+    } catch {
+        return false;
+    }
+};
 
 const initialState = {
     listings: [],
     pendingListings: [],
-    isAdminLoggedIn: false,
+    isAdminLoggedIn: getInitialAuth(),
     loading: true,   // true until first API fetch completes
     error: null,
+    settings: {},
 };
 
 function reducer(state, action) {
@@ -17,6 +28,8 @@ function reducer(state, action) {
             return { ...state, listings: action.payload };
         case 'SET_PENDING':
             return { ...state, pendingListings: action.payload };
+        case 'SET_SETTINGS':
+            return { ...state, settings: action.payload };
         case 'SET_READY':          // called after both fetches succeed
             return { ...state, loading: false, error: null };
         case 'SET_ERROR':          // called when fetch fails — keep loading:true so error screen stays
@@ -64,18 +77,29 @@ function reducer(state, action) {
 export function StoreProvider({ children }) {
     const [state, dispatch] = useReducer(reducer, initialState);
 
-    // ── Load data from MySQL on mount ────────────────────────────────────────
+    // ── Stable re-fetch functions (called both on mount and on SSE events) ────
+    const loadListings = useCallback(async () => {
+        const listings = await api.listings.getAll();
+        dispatch({ type: 'SET_LISTINGS', payload: listings });
+    }, []);
+
+    const loadPending = useCallback(async () => {
+        const pendingListings = await api.pending.getAll();
+        dispatch({ type: 'SET_PENDING', payload: pendingListings });
+    }, []);
+
+    const loadSettings = useCallback(async () => {
+        const settings = await api.settings.getAll();
+        dispatch({ type: 'SET_SETTINGS', payload: settings });
+    }, []);
+
+    // ── Load all data from MySQL on mount ─────────────────────────────────────
     useEffect(() => {
         async function loadData() {
             try {
-                const [listings, pendingListings] = await Promise.all([
-                    api.listings.getAll(),
-                    api.pending.getAll(),
-                ]);
-                dispatch({ type: 'SET_LISTINGS', payload: listings });
-                dispatch({ type: 'SET_PENDING', payload: pendingListings });
+                await Promise.all([loadListings(), loadPending(), loadSettings()]);
                 dispatch({ type: 'SET_READY' });
-            } catch (err) {
+            } catch {
                 dispatch({
                     type: 'SET_ERROR',
                     payload: 'Cannot connect to backend. Please start the backend server:\n\ncd backend  →  npm run dev',
@@ -83,9 +107,15 @@ export function StoreProvider({ children }) {
             }
         }
         loadData();
-    }, []);
+    }, [loadListings, loadPending, loadSettings]);
 
-    // ── API-aware dispatch wrapper ───────────────────────────────────────────
+    // ── SSE: re-fetch only the changed slice when the server pushes an event ──
+    useSSE({
+        onListingsChanged: loadListings,
+        onPendingChanged: loadPending,
+        onSettingsChanged: loadSettings,
+    });
+
     async function apiDispatch(action) {
         try {
             switch (action.type) {
@@ -141,7 +171,7 @@ export function StoreProvider({ children }) {
                 alignItems: 'center', justifyContent: 'center',
                 background: '#0f172a', color: '#fff', gap: '16px', padding: '24px',
             }}>
-                <img src="/drive-prime-logo.png" alt="Drive Prime" style={{ height: 52, marginBottom: 8 }} />
+                <img src={state?.settings?.site_logo || "/drive-prime-logo.png"} alt={state?.settings?.brand_name || "Drive Prime"} style={{ height: 52, marginBottom: 8 }} />
 
                 {state.error ? (
                     <>

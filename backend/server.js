@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const setup = require('./setup');
+const { addClient } = require('./sse');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -26,20 +27,26 @@ app.use('/api/brands', require('./routes/brands'));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/flags', require('./routes/flags'));
+app.use('/api/settings', require('./routes/settings'));
+app.use('/api/appointments', require('./routes/appointments'));
+app.use('/api/dealerships', require('./routes/dealerships'));
+app.use('/api/messages', require('./routes/messages'));
 
 // Health check
 app.get('/api/health', (_, res) => res.json({ status: 'ok', time: new Date() }));
+
+// ── SSE — live data push to all connected browser tabs ───────────────────────
+app.get('/api/events', (req, res) => addClient(req, res));
 
 // ── Start ────────────────────────────────────────────────────────────────────
 async function start() {
     try {
         await setup();           // auto-create DB + tables on first run
-        app.listen(PORT, () => {
-            console.log(`🚀  Drive Prime API running at http://localhost:${PORT}`);
+        app.listen(PORT, '0.0.0.0', () => {
+            console.log(`🚀 Drive Prime API running`);
         });
     } catch (err) {
-        console.error('❌  Failed to start server:', err.message);
-        console.error('    Make sure MySQL is running (XAMPP → Start MySQL)');
+        console.error('❌ Failed to start server', err.message);
         process.exit(1);
     }
 }

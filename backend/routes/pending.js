@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const { v4: uuidv4 } = require('uuid');
+const { broadcast } = require('../sse');
 
 function rowToPending(row) {
     return {
@@ -18,7 +19,12 @@ function rowToPending(row) {
         insurance: row.insurance,
         color: row.color,
         state: row.state,
+        district: row.district,
+        taluk: row.taluk,
+        town: row.town,
         city: row.city,
+        pincode: row.pincode,
+        address: row.address,
         location: row.location,
         about: row.about,
         price: row.price,
@@ -27,6 +33,8 @@ function rowToPending(row) {
         dealerPhone: row.dealer_phone,
         dealerEmail: row.dealer_email,
         dealerWhatsApp: row.dealer_whatsapp,
+        dealershipId: row.dealership_id || null,
+        dealershipName: row.dealership_name || null,
         submittedAt: row.submitted_at,
         createdAt: row.created_at,
     };
@@ -51,21 +59,24 @@ router.post('/', async (req, res) => {
         await db.query(
             `INSERT INTO pending_listings
              (id, brand, model, variant, type, year, km, fuel, transmission,
-              ownership, insurance, color, state, city, location, about, price,
-              images, dealer_name, dealer_phone, dealer_email, dealer_whatsapp, submitted_at)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+              ownership, insurance, color, state, district, taluk, town, city, pincode, address, location, about, price,
+              images, dealer_name, dealer_phone, dealer_email, dealer_whatsapp, submitted_at,
+              dealership_id, dealership_name)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
             [
                 id, l.brand, l.model, l.variant, l.type || 'Car',
                 l.year, l.km, l.fuel, l.transmission, l.ownership,
-                l.insurance, l.color, l.state, l.city,
-                l.location || `${l.city}, ${l.state}`,
+                l.insurance, l.color, l.state, l.district, l.taluk, l.town, l.city, l.pincode, l.address,
+                l.location || `${l.town || l.city}, ${l.district || l.state}`,
                 l.about, l.price,
                 JSON.stringify(l.images || []),
                 l.dealerName, l.dealerPhone, l.dealerEmail, l.dealerWhatsApp,
                 submittedAt,
+                l.dealershipId || null, l.dealershipName || null,
             ]
         );
         const [rows] = await db.query('SELECT * FROM pending_listings WHERE id = ?', [id]);
+        broadcast('pending:changed');
         res.status(201).json(rowToPending(rows[0]));
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -87,22 +98,27 @@ router.post('/:id/approve', async (req, res) => {
         await conn.query(
             `INSERT INTO listings
              (id, brand, model, variant, type, year, km, fuel, transmission,
-              ownership, insurance, color, state, city, location, about, price,
+              ownership, insurance, color, state, district, taluk, town, city, pincode, address, location, about, price,
               images, dealer_name, dealer_phone, dealer_email, dealer_whatsapp,
-              status, featured)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+              status, featured, dealership_id, dealership_name)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
             [
                 newId, l.brand, l.model, l.variant, l.type, l.year, l.km,
                 l.fuel, l.transmission, l.ownership, l.insurance, l.color,
-                l.state, l.city, l.location, l.about, l.price, l.images,
+                l.state, l.district, l.taluk, l.town, l.city, l.pincode, l.address, l.location, l.about, l.price,
+                JSON.stringify(typeof l.images === 'string' ? JSON.parse(l.images) : (l.images || [])),
                 l.dealer_name, l.dealer_phone, l.dealer_email, l.dealer_whatsapp,
                 'live', 0,
+                l.dealership_id || null, l.dealership_name || null,
             ]
         );
         await conn.query('DELETE FROM pending_listings WHERE id = ?', [req.params.id]);
         await conn.commit();
 
         const [rows] = await db.query('SELECT * FROM listings WHERE id = ?', [newId]);
+        // Notify all tabs: both listings and pending changed
+        broadcast('listings:changed');
+        broadcast('pending:changed');
         res.json({ approved: true, listing: rows[0] });
     } catch (err) {
         await conn.rollback();
@@ -116,6 +132,7 @@ router.post('/:id/approve', async (req, res) => {
 router.delete('/:id', async (req, res) => {
     try {
         await db.query('DELETE FROM pending_listings WHERE id = ?', [req.params.id]);
+        broadcast('pending:changed');
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });

@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom';
 import { FiMapPin, FiPhone, FiMail, FiFacebook, FiTwitter, FiInstagram, FiYoutube } from 'react-icons/fi';
-
+import { useStore } from '../store/StoreContext';
 
 export default function Footer() {
+    const { state } = useStore();
     return (
         <footer style={{
             background: 'var(--bg-dark)',
@@ -15,13 +16,13 @@ export default function Footer() {
                     <div>
                         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
                             <img
-                                src="/drive-prime-logo.png"
-                                alt="Drive Prime"
+                                src={state?.settings?.site_logo || "/drive-prime-logo.png"}
+                                alt={state?.settings?.brand_name || "Drive Prime"}
                                 style={{ height: '40px', width: 'auto', objectFit: 'contain', filter: 'brightness(1.05)' }}
                             />
                         </div>
                         <p style={{ fontSize: '0.9rem', lineHeight: 1.7, marginBottom: '20px' }}>
-                            India's trusted marketplace for buying & selling cars and bikes. 10,000+ verified listings across the country.
+                            India's trusted marketplace for buying & selling cars and bikes. 100+ verified listings across the country.
                         </p>
                         <div style={{ display: 'flex', gap: '12px' }}>
                             {[FiFacebook, FiTwitter, FiInstagram, FiYoutube].map((Icon, i) => (
@@ -85,15 +86,15 @@ export default function Footer() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                             <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
                                 <FiMapPin size={16} style={{ color: 'var(--primary)', marginTop: '2px', flexShrink: 0 }} />
-                                <span style={{ fontSize: '0.9rem' }}>Drive Prime HQ, Marine Drive, Kochi — 682031, Kerala, India</span>
+                                <span style={{ fontSize: '0.9rem' }}>{state?.settings?.dealer_address || "Drive Prime HQ, Marine Drive, Kochi — 682031, Kerala, India"}</span>
                             </div>
                             <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                                 <FiPhone size={16} style={{ color: 'var(--primary)' }} />
-                                <a href="tel:+918000000000" style={{ fontSize: '0.9rem' }}>+91 80000 00000</a>
+                                <a href={`tel:${state?.settings?.dealer_phone || "+918000000000"}`} style={{ fontSize: '0.9rem' }}>{state?.settings?.dealer_phone || "+91 80000 00000"}</a>
                             </div>
                             <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                                 <FiMail size={16} style={{ color: 'var(--primary)' }} />
-                                <a href="mailto:support@driveprime.in" style={{ fontSize: '0.9rem' }}>support@driveprime.in</a>
+                                <a href={`mailto:${state?.settings?.dealer_email || "support@driveprime.in"}`} style={{ fontSize: '0.9rem' }}>{state?.settings?.dealer_email || "support@driveprime.in"}</a>
                             </div>
                         </div>
                     </div>
@@ -110,10 +111,10 @@ export default function Footer() {
                     gap: '12px',
                     fontSize: '0.85rem',
                 }}>
-                    <span>© 2026 DrivePrime. All rights reserved.</span>
+                    <span>© {new Date().getFullYear()} {state?.settings?.brand_name || "Drive Prime"}. All rights reserved.</span>
                     <div style={{ display: 'flex', gap: '20px' }}>
-                        <a href="#">Privacy Policy</a>
-                        <a href="#">Terms of Service</a>
+                        <Link to="/privacy">Privacy Policy</Link>
+                        <Link to="/terms">Terms of Service</Link>
                         <a href="#">Cookie Policy</a>
                     </div>
                 </div>

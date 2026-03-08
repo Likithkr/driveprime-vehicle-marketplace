@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiPlus, FiTrash2, FiEdit2, FiCheck, FiX, FiUser, FiShield, FiCode } from 'react-icons/fi';
 import { useStore } from '../../store/StoreContext';
 import { useToast } from '../../components/ToastProvider';
-import { useCustomer } from '../../hooks/useCustomer';
+import { useAdmin } from '../../hooks/useAdmin';
 import { API_BASE } from '../../lib/config';
 
 const ROLES = ['customer', 'staff', 'admin', 'developer'];
@@ -18,7 +18,7 @@ const roleMeta = {
 export default function AdminUsersPage() {
     const { state } = useStore();
     const { addToast } = useToast();
-    const customerHook = useCustomer();
+    const adminHook = useAdmin();
     const navigate = useNavigate();
 
     const [users, setUsers] = useState([]);
@@ -32,8 +32,8 @@ export default function AdminUsersPage() {
 
     if (!state.isAdminLoggedIn) { navigate('/admin/login'); return null; }
 
-    // Get admin token from customer session (admin logs in with same /api/auth/login)
-    const adminToken = customerHook.getToken();
+    // Get admin token from admin session
+    const adminToken = adminHook.getToken();
 
     const authHeaders = {
         'Content-Type': 'application/json',

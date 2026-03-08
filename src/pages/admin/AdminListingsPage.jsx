@@ -3,17 +3,19 @@ import { Link, useNavigate } from 'react-router-dom';
 import { FiPlus, FiSearch, FiEdit, FiTrash2, FiArrowLeft, FiMapPin, FiGrid, FiList } from 'react-icons/fi';
 import { useStore } from '../../store/StoreContext';
 import { useToast } from '../../components/ToastProvider';
+import { useAdmin } from '../../hooks/useAdmin';
 import CarCard from '../../components/CarCard';
 
 export default function AdminListingsPage() {
     const { state, dispatch } = useStore();
     const { addToast } = useToast();
     const navigate = useNavigate();
+    const admin = useAdmin();
     const [search, setSearch] = useState('');
     const [filter, setFilter] = useState('all');
     const [viewMode, setViewMode] = useState('grid');
 
-    if (!state.isAdminLoggedIn) { navigate('/admin/login'); return null; }
+    if (!admin.isLoggedIn()) { navigate('/admin/login'); return null; }
 
     const filtered = state.listings.filter(l => {
         const matchSearch = `${l.brand} ${l.model} ${l.city}`.toLowerCase().includes(search.toLowerCase());

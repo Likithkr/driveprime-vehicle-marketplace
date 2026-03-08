@@ -1,11 +1,11 @@
 /**
- * useCustomer — manages the logged-in customer session.
- * Reads from / writes to localStorage key `dp_customer`
+ * useAdmin — manages the logged-in admin/staff/developer session.
+ * Reads from / writes to localStorage key `dp_admin`
  */
 
-const SESSION_KEY = 'dp_customer';
+const SESSION_KEY = 'dp_admin';
 
-export function useCustomer() {
+export function useAdmin() {
     function getSession() {
         try {
             const raw = localStorage.getItem(SESSION_KEY);
@@ -15,12 +15,10 @@ export function useCustomer() {
 
     function login(token, user) {
         localStorage.setItem(SESSION_KEY, JSON.stringify({ token, user }));
-        window.dispatchEvent(new Event('customer_state_change'));
     }
 
     function logout() {
         localStorage.removeItem(SESSION_KEY);
-        window.dispatchEvent(new Event('customer_state_change'));
     }
 
     function getToken() {

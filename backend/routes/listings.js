@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const { v4: uuidv4 } = require('uuid');
+const { broadcast } = require('../sse');
 
 // Helper: convert DB row → JS object (snake_case → camelCase, parse JSON images)
 function rowToListing(row) {
@@ -19,7 +20,12 @@ function rowToListing(row) {
         insurance: row.insurance,
         color: row.color,
         state: row.state,
+        district: row.district,
+        taluk: row.taluk,
+        town: row.town,
         city: row.city,
+        pincode: row.pincode,
+        address: row.address,
         location: row.location,
         about: row.about,
         price: row.price,
@@ -28,6 +34,8 @@ function rowToListing(row) {
         dealerPhone: row.dealer_phone,
         dealerEmail: row.dealer_email,
         dealerWhatsApp: row.dealer_whatsapp,
+        dealershipId: row.dealership_id || null,
+        dealershipName: row.dealership_name || null,
         status: row.status,
         featured: Boolean(row.featured),
         createdAt: row.created_at,
@@ -52,23 +60,26 @@ router.post('/', async (req, res) => {
         await db.query(
             `INSERT INTO listings
              (id, brand, model, variant, type, year, km, fuel, transmission,
-              ownership, insurance, color, state, city, location, about, price,
+              ownership, insurance, color, state, district, taluk, town, city, pincode, address, location, about, price,
               images, dealer_name, dealer_phone, dealer_email, dealer_whatsapp,
-              status, featured)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+              status, featured, dealership_id, dealership_name)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
             [
                 id, l.brand, l.model, l.variant, l.type || 'Car',
                 l.year, l.km, l.fuel, l.transmission, l.ownership,
-                l.insurance, l.color, l.state, l.city,
-                l.location || `${l.city}, ${l.state}`,
+                l.insurance, l.color, l.state, l.district, l.taluk, l.town, l.city, l.pincode, l.address,
+                l.location || `${l.town || l.city}, ${l.district || l.state}`,
                 l.about, l.price,
                 JSON.stringify(l.images || []),
                 l.dealerName, l.dealerPhone, l.dealerEmail, l.dealerWhatsApp,
                 l.status || 'live', l.featured ? 1 : 0,
+                l.dealershipId || null, l.dealershipName || null,
             ]
         );
         const [rows] = await db.query('SELECT * FROM listings WHERE id = ?', [id]);
-        res.status(201).json(rowToListing(rows[0]));
+        const listing = rowToListing(rows[0]);
+        broadcast('listings:changed');
+        res.status(201).json(listing);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -81,24 +92,28 @@ router.put('/:id', async (req, res) => {
         await db.query(
             `UPDATE listings SET
               brand=?, model=?, variant=?, type=?, year=?, km=?, fuel=?,
-              transmission=?, ownership=?, insurance=?, color=?, state=?, city=?,
+              transmission=?, ownership=?, insurance=?, color=?, state=?, district=?, taluk=?, town=?, city=?, pincode=?, address=?,
               location=?, about=?, price=?, images=?, dealer_name=?, dealer_phone=?,
-              dealer_email=?, dealer_whatsapp=?, status=?, featured=?
+              dealer_email=?, dealer_whatsapp=?, status=?, featured=?,
+              dealership_id=?, dealership_name=?
              WHERE id=?`,
             [
                 l.brand, l.model, l.variant, l.type || 'Car',
                 l.year, l.km, l.fuel, l.transmission, l.ownership,
-                l.insurance, l.color, l.state, l.city,
-                l.location || `${l.city}, ${l.state}`,
+                l.insurance, l.color, l.state, l.district, l.taluk, l.town, l.city, l.pincode, l.address,
+                l.location || `${l.town || l.city}, ${l.district || l.state}`,
                 l.about, l.price,
                 JSON.stringify(l.images || []),
                 l.dealerName, l.dealerPhone, l.dealerEmail, l.dealerWhatsApp,
                 l.status || 'live', l.featured ? 1 : 0,
+                l.dealershipId || null, l.dealershipName || null,
                 req.params.id,
             ]
         );
         const [rows] = await db.query('SELECT * FROM listings WHERE id = ?', [req.params.id]);
-        res.json(rowToListing(rows[0]));
+        const listing = rowToListing(rows[0]);
+        broadcast('listings:changed');
+        res.json(listing);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -108,6 +123,7 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
     try {
         await db.query('DELETE FROM listings WHERE id = ?', [req.params.id]);
+        broadcast('listings:changed');
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -122,7 +138,9 @@ router.patch('/:id/toggle-sold', async (req, res) => {
             [req.params.id]
         );
         const [rows] = await db.query('SELECT * FROM listings WHERE id = ?', [req.params.id]);
-        res.json(rowToListing(rows[0]));
+        const listing = rowToListing(rows[0]);
+        broadcast('listings:changed');
+        res.json(listing);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

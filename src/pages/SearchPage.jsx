@@ -1,24 +1,67 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { FiFilter, FiX, FiChevronDown, FiSearch, FiSliders } from 'react-icons/fi';
+import { FiX, FiSearch, FiSliders } from 'react-icons/fi';
 import { useStore } from '../store/StoreContext';
 import CarCard from '../components/CarCard';
 import { BRANDS, FUEL_TYPES, TRANSMISSIONS, INDIA_STATES } from '../data/mockData';
 
 const SORT_OPTIONS = [
     { value: 'latest', label: 'Latest First' },
-    { value: 'price_asc', label: 'Price: Low to High' },
-    { value: 'price_desc', label: 'Price: High to Low' },
+    { value: 'price_asc', label: 'Price: Low → High' },
+    { value: 'price_desc', label: 'Price: High → Low' },
     { value: 'km_asc', label: 'Lowest KM' },
     { value: 'year_desc', label: 'Newest Year' },
 ];
 
+// Inject responsive styles once
+const STYLE_ID = 'search-page-responsive';
+if (!document.getElementById(STYLE_ID)) {
+    const s = document.createElement('style');
+    s.id = STYLE_ID;
+    s.textContent = `
+        .sp-layout { display: flex; gap: 28px; align-items: flex-start; }
+        .sp-sidebar {
+            width: 260px; flex-shrink: 0;
+            background: var(--card, #fff);
+            border-radius: var(--radius-lg, 12px);
+            border: 1px solid var(--border, #e5e7eb);
+            padding: 24px;
+            position: sticky; top: 80px;
+            max-height: calc(100vh - 100px); overflow-y: auto;
+        }
+        .sp-filter-btn { display: none !important; }
+        .sp-drawer-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.45); z-index: 999;
+        }
+        .sp-drawer {
+            display: none; position: fixed; bottom: 0; left: 0; right: 0;
+            background: var(--card, #fff); border-radius: 20px 20px 0 0;
+            padding: 20px; z-index: 1000;
+            max-height: 82vh; overflow-y: auto;
+            box-shadow: 0 -8px 40px rgba(0,0,0,0.18);
+            animation: slideUp 0.25s ease;
+        }
+        @keyframes slideUp {
+            from { transform: translateY(60px); opacity: 0; }
+            to   { transform: translateY(0);   opacity: 1; }
+        }
+        @media (max-width: 700px) {
+            .sp-layout { display: block; }
+            .sp-sidebar { display: none !important; }
+            .sp-filter-btn { display: inline-flex !important; }
+            .sp-drawer-overlay.open { display: block; }
+            .sp-drawer.open { display: block; }
+        }
+    `;
+    document.head.appendChild(s);
+}
+
 export default function SearchPage() {
     const { state } = useStore();
-    const [searchParams, setSearchParams] = useSearchParams();
-    const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [searchParams] = useSearchParams();
+    const [drawerOpen, setDrawerOpen] = useState(false);
 
-    // Filters
     const [query, setQuery] = useState(searchParams.get('q') || '');
     const [type, setType] = useState(searchParams.get('type') || '');
     const [selectedBrands, setSelectedBrands] = useState(
@@ -34,12 +77,18 @@ export default function SearchPage() {
     const [sort, setSort] = useState('latest');
     const [showSold, setShowSold] = useState(false);
 
-    // Sync filters when navbar changes the URL search params
     useEffect(() => {
         setQuery(searchParams.get('q') || '');
         setType(searchParams.get('type') || '');
         if (searchParams.get('brand')) setSelectedBrands([searchParams.get('brand')]);
     }, [searchParams]);
+
+    // Close drawer on outside scroll (UX nicety)
+    useEffect(() => {
+        if (drawerOpen) document.body.style.overflow = 'hidden';
+        else document.body.style.overflow = '';
+        return () => { document.body.style.overflow = ''; };
+    }, [drawerOpen]);
 
     const toggleArr = (arr, setArr, val) =>
         setArr(prev => prev.includes(val) ? prev.filter(x => x !== val) : [...prev, val]);
@@ -57,12 +106,10 @@ export default function SearchPage() {
         list = list.filter(l => l.price >= minBudget && l.price <= maxBudget);
         list = list.filter(l => l.km >= minKm && l.km <= maxKm);
         if (selectedState) list = list.filter(l => l.state === selectedState);
-
         if (sort === 'price_asc') list.sort((a, b) => a.price - b.price);
         else if (sort === 'price_desc') list.sort((a, b) => b.price - a.price);
         else if (sort === 'km_asc') list.sort((a, b) => a.km - b.km);
         else if (sort === 'year_desc') list.sort((a, b) => b.year - a.year);
-
         return list;
     }, [state.listings, query, type, selectedBrands, fuels, transmissions, minBudget, maxBudget, minKm, maxKm, selectedState, sort, showSold]);
 
@@ -73,9 +120,10 @@ export default function SearchPage() {
         setSelectedState('');
     };
 
-    const hasFilters = query || type || selectedBrands.length || fuels.length || transmissions.length || minBudget > 0 || maxBudget < 10000000 || minKm > 0 || maxKm < 300000 || selectedState;
+    const hasFilters = query || type || selectedBrands.length || fuels.length || transmissions.length
+        || minBudget > 0 || maxBudget < 10000000 || minKm > 0 || maxKm < 300000 || selectedState;
 
-    const FilterPanel = () => (
+    const FilterContent = () => (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             {/* Vehicle Type */}
             <div>
@@ -105,10 +153,11 @@ export default function SearchPage() {
                 <input type="range" min={0} max={10000000} step={50000}
                     value={maxBudget} onChange={e => setMaxBudget(Number(e.target.value))} />
                 <input type="range" min={0} max={10000000} step={50000}
-                    value={minBudget} onChange={e => setMinBudget(Number(e.target.value))} style={{ marginTop: '8px' }} />
+                    value={minBudget} onChange={e => setMinBudget(Number(e.target.value))}
+                    style={{ marginTop: '8px' }} />
             </div>
 
-            {/* KM Range */}
+            {/* KM */}
             <div>
                 <h4 style={{ fontWeight: 700, marginBottom: '12px', fontSize: '0.9rem' }}>KM Driven</h4>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '6px' }}>
@@ -182,49 +231,52 @@ export default function SearchPage() {
 
     return (
         <div className="container" style={{ paddingTop: '32px', paddingBottom: '60px' }}>
-            {/* Top bar */}
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap' }}>
-                <div style={{ flex: 1, position: 'relative', minWidth: '200px' }}>
+
+            {/* ── Top bar ── */}
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap' }}>
+                {/* Search */}
+                <div style={{ flex: 1, position: 'relative', minWidth: '180px' }}>
                     <FiSearch size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                     <input value={query} onChange={e => setQuery(e.target.value)}
                         placeholder="Search brand, model, city..."
-                        className="form-input"
-                        style={{ paddingLeft: '40px' }}
-                    />
+                        className="form-input" style={{ paddingLeft: '40px' }} />
                 </div>
+
+                {/* Sort */}
                 <select value={sort} onChange={e => setSort(e.target.value)} className="form-select" style={{ width: 'auto' }}>
                     {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
-                <button onClick={() => setSidebarOpen(true)} className="btn btn-outline btn-sm" style={{ display: 'none' }} id="filter-btn">
-                    <FiSliders size={14} /> Filters
+
+                {/* Mobile filter button */}
+                <button onClick={() => setDrawerOpen(true)} className="btn btn-outline btn-sm sp-filter-btn">
+                    <FiSliders size={14} /> Filters {hasFilters ? `(on)` : ''}
                 </button>
+
+                {/* Clear filters */}
                 {hasFilters && (
                     <button onClick={clearFilters} className="btn btn-sm" style={{ background: '#fee2e2', color: '#dc2626' }}>
-                        <FiX size={14} /> Clear Filters
+                        <FiX size={14} /> Clear
                     </button>
                 )}
             </div>
 
-            <div style={{ display: 'flex', gap: '28px', alignItems: 'flex-start' }}>
-                {/* Sidebar */}
-                <aside style={{
-                    width: '260px', flexShrink: 0,
-                    background: '#fff', borderRadius: 'var(--radius-lg)',
-                    border: '1px solid var(--border)', padding: '24px',
-                    position: 'sticky', top: '80px', maxHeight: 'calc(100vh - 100px)', overflowY: 'auto',
-                }}>
+            {/* ── Layout ── */}
+            <div className="sp-layout">
+
+                {/* Desktop sidebar */}
+                <aside className="sp-sidebar">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                         <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>Filters</h3>
                         {hasFilters && (
                             <button onClick={clearFilters} style={{ fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 600 }}>Clear all</button>
                         )}
                     </div>
-                    <FilterPanel />
+                    <FilterContent />
                 </aside>
 
                 {/* Results */}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ marginBottom: '20px', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                    <div style={{ marginBottom: '16px', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
                         <strong style={{ color: 'var(--text)' }}>{filtered.length}</strong> vehicles found
                     </div>
                     {filtered.length === 0 ? (
@@ -242,6 +294,26 @@ export default function SearchPage() {
                         </div>
                     )}
                 </div>
+            </div>
+
+            {/* ── Mobile drawer overlay ── */}
+            <div className={`sp-drawer-overlay ${drawerOpen ? 'open' : ''}`} onClick={() => setDrawerOpen(false)} />
+
+            {/* ── Mobile filter drawer ── */}
+            <div className={`sp-drawer ${drawerOpen ? 'open' : ''}`}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>Filters</h3>
+                    <button onClick={() => setDrawerOpen(false)} style={{ padding: '4px 8px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                        <FiX size={18} />
+                    </button>
+                </div>
+                <FilterContent />
+                <button
+                    onClick={() => setDrawerOpen(false)}
+                    className="btn btn-primary"
+                    style={{ width: '100%', marginTop: '24px', padding: '14px', fontSize: '1rem' }}>
+                    Show {filtered.length} Results
+                </button>
             </div>
         </div>
     );

@@ -16,9 +16,9 @@ const BRAND_COLORS = {
 };
 
 const STATS = [
-    { value: '10,000+', label: 'Verified Listings' },
-    { value: '500+', label: 'Trusted Dealers' },
-    { value: '28', label: 'States Covered' },
+    { value: '100+', label: 'Verified Listings' },
+    { value: 'Trusted', label: 'Dealers' },
+    { value: 'All', label: 'States Covered' },
     { value: '₹50L+', label: 'Saved by Buyers' },
 ];
 
@@ -129,7 +129,7 @@ export default function HomePage() {
             {/* ===== STATS ===== */}
             <section style={{ background: 'var(--primary)', padding: '32px 0' }}>
                 <div className="container">
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', textAlign: 'center' }}>
+                    <div className="grid-4" style={{ textAlign: 'center' }}>
                         {STATS.map(({ value, label }) => (
                             <div key={label}>
                                 <div style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.4rem, 3vw, 2rem)', fontWeight: 900, color: '#fff' }}>{value}</div>

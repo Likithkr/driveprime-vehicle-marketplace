@@ -84,7 +84,7 @@ export default function CarCard({ listing, showActions, onToggleSold, onEdit, on
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                             <FiMapPin size={12} />
-                            {listing.city}, {listing.state.substring(0, 8)}
+                            {listing.town || listing.city}, {(listing.district || listing.state).substring(0, 10)}
                         </div>
                     </div>
                     <Link

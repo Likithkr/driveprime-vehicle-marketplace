@@ -50,6 +50,39 @@ async function setup() {
         )
     `);
 
+    // ── dealerships table ────────────────────────────────────────────────────
+    await conn.query(`
+        CREATE TABLE IF NOT EXISTS dealerships (
+            id          VARCHAR(36)  PRIMARY KEY,
+            name        VARCHAR(200) NOT NULL,
+            type        VARCHAR(20)  DEFAULT 'drive_prime',
+            address     VARCHAR(300) DEFAULT '',
+            city        VARCHAR(100) DEFAULT '',
+            state       VARCHAR(100) DEFAULT '',
+            phone       VARCHAR(20)  DEFAULT '',
+            email       VARCHAR(200) DEFAULT '',
+            created_at  TIMESTAMP    DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
+    // Seed default dealerships if table is empty
+    const [dealerCount] = await conn.query('SELECT COUNT(*) as cnt FROM dealerships');
+    if (dealerCount[0].cnt === 0) {
+        const crypto2 = require('crypto');
+        const defaultDealerships = [
+            { name: 'Drive Prime — Kochi (Main)', address: 'Marine Drive, Ernakulam', city: 'Kochi', state: 'Kerala', phone: '+91 80000 00001', email: 'kochi@driveprime.in' },
+            { name: 'Drive Prime — Trivandrum', address: 'MG Road, Palayam', city: 'Thiruvananthapuram', state: 'Kerala', phone: '+91 80000 00002', email: 'trivandrum@driveprime.in' },
+            { name: 'Drive Prime — Calicut', address: 'SM Street, Kozhikode', city: 'Kozhikode', state: 'Kerala', phone: '+91 80000 00003', email: 'calicut@driveprime.in' },
+        ];
+        for (const d of defaultDealerships) {
+            await conn.query(
+                'INSERT INTO dealerships (id, name, type, address, city, state, phone, email) VALUES (?,?,?,?,?,?,?,?)',
+                [crypto2.randomUUID(), d.name, 'drive_prime', d.address, d.city, d.state, d.phone, d.email]
+            );
+        }
+        console.log('🏢  Default dealerships seeded.');
+    }
+
     // ── pending_listings table ───────────────────────────────────────────────
     await conn.query(`
         CREATE TABLE IF NOT EXISTS pending_listings (
@@ -118,9 +151,20 @@ async function setup() {
             password_hash VARCHAR(255) NOT NULL,
             role         VARCHAR(20)  DEFAULT 'customer',
             phone        VARCHAR(20)  DEFAULT '',
+            reset_otp    VARCHAR(10)  DEFAULT NULL,
+            reset_otp_expiry DATETIME DEFAULT NULL,
             created_at   TIMESTAMP    DEFAULT CURRENT_TIMESTAMP
         )
     `);
+
+    // Safely attempt to add the OTP columns to existing users tables
+    try {
+        await conn.query('ALTER TABLE users ADD COLUMN reset_otp VARCHAR(10) DEFAULT NULL');
+        await conn.query('ALTER TABLE users ADD COLUMN reset_otp_expiry DATETIME DEFAULT NULL');
+    } catch (err) {
+        // Ignore duplicate column errors (ER_DUP_FIELDNAME)
+        if (err.code !== 'ER_DUP_FIELDNAME') console.error('Error adding OTP cols: ', err.message);
+    }
 
     // Seed developer + default admin accounts if users table is empty
     const [userCount] = await conn.query('SELECT COUNT(*) as cnt FROM users');
@@ -164,8 +208,135 @@ async function setup() {
         );
     }
 
+    // ── settings table ───────────────────────────────────────────────────────
+    await conn.query(`
+        CREATE TABLE IF NOT EXISTS settings (
+            \`key\`       VARCHAR(100) PRIMARY KEY,
+            value        TEXT,
+            description  VARCHAR(300) DEFAULT '',
+            updated_by   VARCHAR(200) DEFAULT '',
+            updated_at   TIMESTAMP    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )
+    `);
+
+    // Seed default settings
+    const defaultSettings = [
+        ['site_logo', '/drive-prime-logo.png', 'URL or path to the main site logo badge'],
+        ['dealer_phone', '+91 80000 00000', 'Main contact phone number for the dealership'],
+        ['dealer_email', 'support@driveprime.in', 'Main contact email address'],
+        ['dealer_whatsapp', '+918000000000', 'WhatsApp number (include country code, no spaces)'],
+        ['dealer_address', 'Drive Prime HQ, Marine Drive, Kochi — 682031, Kerala, India', 'Physical address shown in footer and contact pages'],
+        ['brand_name', 'Drive Prime', 'Name of the business, used in alt tags and titles'],
+    ];
+
+    for (const [key, value, description] of defaultSettings) {
+        await conn.query(
+            'INSERT IGNORE INTO settings (`key`, value, description) VALUES (?,?,?)',
+            [key, value, description]
+        );
+    }
+
+    // ── appointments table ───────────────────────────────────────────────────
+    await conn.query(`
+        CREATE TABLE IF NOT EXISTS appointments (
+            id                  VARCHAR(36)  PRIMARY KEY,
+            listing_id          VARCHAR(36)  NOT NULL,
+            car_name            VARCHAR(300),
+            user_id             VARCHAR(36)  NOT NULL,
+            customer_name       VARCHAR(200) NOT NULL,
+            customer_email      VARCHAR(200) NOT NULL,
+            customer_phone      VARCHAR(20)  NOT NULL,
+            preferred_date      DATE         NOT NULL,
+            message             TEXT,
+            confirmed_date      DATE         DEFAULT NULL,
+            confirmed_time      VARCHAR(10)  DEFAULT NULL,
+            confirmed_location  VARCHAR(300) DEFAULT NULL,
+            status              VARCHAR(20)  DEFAULT 'pending',
+            created_at          TIMESTAMP    DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
+    // ── Migrate dealership columns onto existing listings tables ───────────────
+    try {
+        await conn.query(`ALTER TABLE listings ADD COLUMN dealership_id VARCHAR(36) DEFAULT NULL`);
+    } catch (err) {
+        if (err.code !== 'ER_DUP_FIELDNAME') console.error('listings.dealership_id migration:', err.message);
+    }
+    try {
+        await conn.query(`ALTER TABLE listings ADD COLUMN dealership_name VARCHAR(200) DEFAULT NULL`);
+    } catch (err) {
+        if (err.code !== 'ER_DUP_FIELDNAME') console.error('listings.dealership_name migration:', err.message);
+    }
+    try {
+        await conn.query(`ALTER TABLE pending_listings ADD COLUMN dealership_id VARCHAR(36) DEFAULT NULL`);
+    } catch (err) {
+        if (err.code !== 'ER_DUP_FIELDNAME') console.error('pending.dealership_id migration:', err.message);
+    }
+    try {
+        await conn.query(`ALTER TABLE pending_listings ADD COLUMN dealership_name VARCHAR(200) DEFAULT NULL`);
+    } catch (err) {
+        if (err.code !== 'ER_DUP_FIELDNAME') console.error('pending.dealership_name migration:', err.message);
+    }
+
+    // ── Migrate dealership type column ─────────────────────────────────────────
+    try {
+        await conn.query(`ALTER TABLE dealerships ADD COLUMN type VARCHAR(20) DEFAULT 'drive_prime'`);
+    } catch (err) {
+        if (err.code !== 'ER_DUP_FIELDNAME') console.error('dealerships.type migration:', err.message);
+    }
+
+    // ── Migrate expanded address fields ────────────────────────────────────────
+    const newFields = [
+        { name: 'district', type: 'VARCHAR(100)' },
+        { name: 'taluk', type: 'VARCHAR(100)' },
+        { name: 'town', type: 'VARCHAR(100)' },
+        { name: 'pincode', type: 'VARCHAR(20)' },
+        { name: 'address', type: 'VARCHAR(300)' },
+    ];
+
+    for (const table of ['listings', 'pending_listings', 'dealerships']) {
+        for (const field of newFields) {
+            try {
+                // dealerships already has an address column
+                if (table === 'dealerships' && field.name === 'address') continue;
+                await conn.query(`ALTER TABLE ${table} ADD COLUMN ${field.name} ${field.type} DEFAULT NULL`);
+            } catch (err) {
+                if (err.code !== 'ER_DUP_FIELDNAME') console.error(`${table}.${field.name} migration:`, err.message);
+            }
+        }
+    }
+
+    // ── dealership_messages table ─────────────────────────────────────────────
+    await conn.query(`
+        CREATE TABLE IF NOT EXISTS dealership_messages (
+            id                      VARCHAR(36)  PRIMARY KEY,
+            from_dealership_id      VARCHAR(36)  DEFAULT NULL,
+            from_dealership_name    VARCHAR(200) DEFAULT 'Platform',
+            to_dealership_id        VARCHAR(36)  DEFAULT NULL,
+            to_dealership_name      VARCHAR(200) DEFAULT 'All Dealerships',
+            sender_id               VARCHAR(36)  NOT NULL,
+            sender_name             VARCHAR(200) NOT NULL,
+            subject                 VARCHAR(300) NOT NULL,
+            body                    TEXT         NOT NULL,
+            is_read                 TINYINT(1)   DEFAULT 0,
+            created_at              TIMESTAMP    DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
+    // ── Migrate images columns to LONGTEXT if they are still JSON ──────────────
+    // JSON columns in MySQL silently reject rows larger than max_allowed_packet.
+    // LONGTEXT stores up to 4GB, making it safe for base64 image arrays.
+    try {
+        await conn.query(`ALTER TABLE listings MODIFY COLUMN images LONGTEXT`);
+        await conn.query(`ALTER TABLE pending_listings MODIFY COLUMN images LONGTEXT`);
+    } catch (err) {
+        // Ignore errors (e.g. if columns are already LONGTEXT or don't exist yet)
+        if (!err.message.includes('column')) console.warn('images column migration skipped:', err.message);
+    }
+
     console.log(`✅  Database "${db}" and tables are ready.`);
     await conn.end();
+
 }
 
 module.exports = setup;

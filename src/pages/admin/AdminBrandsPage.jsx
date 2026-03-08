@@ -4,12 +4,14 @@ import { FiArrowLeft, FiPlus, FiTrash2, FiEdit2, FiCheck, FiX, FiTag } from 'rea
 import { useStore } from '../../store/StoreContext';
 import { useToast } from '../../components/ToastProvider';
 import { api } from '../../lib/api';
+import { useAdmin } from '../../hooks/useAdmin';
 
 const TYPES = ['car', 'bike', 'both'];
 
 export default function AdminBrandsPage() {
     const { state } = useStore();
     const { addToast } = useToast();
+    const admin = useAdmin();
     const navigate = useNavigate();
 
     const [brands, setBrands] = useState([]);

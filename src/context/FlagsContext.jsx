@@ -10,14 +10,18 @@ export function FlagsProvider({ children }) {
         maintenance_mode: { value: false },
     });
 
-    useEffect(() => {
-        fetch(`${API_BASE}/api/flags`)
+    const refreshFlags = () => {
+        return fetch(`${API_BASE}/api/flags`)
             .then(r => r.json())
             .then(data => setFlags(data))
-            .catch(() => { }); // silently fail — use defaults
+            .catch(() => { });
+    };
+
+    useEffect(() => {
+        refreshFlags();
     }, []);
 
-    return <FlagsContext.Provider value={flags}>{children}</FlagsContext.Provider>;
+    return <FlagsContext.Provider value={{ flags, refreshFlags }}>{children}</FlagsContext.Provider>;
 }
 
 export function useFlags() {
