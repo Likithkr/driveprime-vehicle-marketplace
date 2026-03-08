@@ -27,6 +27,7 @@ export default function AdminDealershipsPage() {
     const [form, setForm] = useState(emptyForm);
     const [saving, setSaving] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState(null);
+    const [newAccount, setNewAccount] = useState(null);
 
     useEffect(() => {
         if (!state.isAdminLoggedIn) navigate('/admin/login');
@@ -48,6 +49,7 @@ export default function AdminDealershipsPage() {
 
     const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
+    const openAdd = () => { setForm({ ...emptyForm, type: activeTab }); setModal({ mode: 'add' }); };
     const openEdit = (d) => { setForm({ name: d.name, type: d.type, address: d.address, town: d.town || '', city: d.city, taluk: d.taluk || '', district: d.district || '', state: d.state, pincode: d.pincode || '', phone: d.phone, email: d.email }); setModal({ mode: 'edit', id: d.id }); };
 
     const handleSave = async (e) => {
@@ -56,8 +58,11 @@ export default function AdminDealershipsPage() {
         setSaving(true);
         try {
             if (modal.mode === 'add') {
-                await api.dealerships.add(form, token);
+                const res = await api.dealerships.add(form, token);
                 addToast('Dealership added!', 'success');
+                if (res.tempPassword) {
+                    setNewAccount({ email: res.accountEmail, password: res.tempPassword, name: res.name });
+                }
             } else {
                 await api.dealerships.update(modal.id, form, token);
                 addToast('Dealership updated!', 'success');
@@ -285,6 +290,39 @@ export default function AdminDealershipsPage() {
                                 <FiTrash2 size={14} /> Delete
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Dealer Account Created Modal */}
+            {newAccount && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1050, padding: 20 }}>
+                    <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 460, padding: 32, boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', textAlign: 'center' }}>
+                        <div style={{ fontSize: 56, marginBottom: 16 }}>🎉</div>
+                        <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.5rem', marginBottom: 8, color: 'var(--primary)' }}>Account Created!</h2>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', marginBottom: 24, lineHeight: 1.6 }}>
+                            A dealer account for <strong>{newAccount.name}</strong> was automatically generated. Please share these credentials with the dealership manager.
+                        </p>
+
+                        <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px', textAlign: 'left', marginBottom: 24 }}>
+                            <div style={{ marginBottom: 12 }}>
+                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Login Email</label>
+                                <div style={{ fontWeight: 600, fontSize: '1.05rem', wordBreak: 'break-all' }}>{newAccount.email}</div>
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Temporary Password</label>
+                                <div style={{
+                                    fontFamily: 'monospace', fontSize: '1.25rem', fontWeight: 700, color: 'var(--primary)',
+                                    background: '#fff', padding: '8px 12px', borderRadius: 'var(--radius)', border: '1px dashed var(--border)', width: 'fit-content'
+                                }}>
+                                    {newAccount.password}
+                                </div>
+                            </div>
+                        </div>
+
+                        <button onClick={() => setNewAccount(null)} style={{ background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 'var(--radius)', padding: '12px 24px', fontWeight: 700, fontSize: '1rem', cursor: 'pointer', width: '100%' }}>
+                            Done
+                        </button>
                     </div>
                 </div>
             )}

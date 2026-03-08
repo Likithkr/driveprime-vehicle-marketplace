@@ -39,13 +39,37 @@ router.post('/', requireAdmin, async (req, res) => {
         const { name, type = 'drive_prime', address = '', town = '', city = '', taluk = '', district = '', state = '', pincode = '', phone = '', email = '' } = req.body;
         if (!name) return res.status(400).json({ error: 'Name is required' });
         const id = uuidv4();
+
         await db.query(
             'INSERT INTO dealerships (id, name, type, address, town, city, taluk, district, state, pincode, phone, email) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
             [id, name, type, address, town, city, taluk, district, state, pincode, phone, email]
         );
+
+        // Auto-create dealer account
+        const crypto = require('crypto');
+        const bcrypt = require('bcryptjs');
+        const tempPassword = crypto.randomBytes(4).toString('hex');
+        const hash = await bcrypt.hash(tempPassword, 10);
+        const userId = uuidv4();
+        const userEmail = email || `dealer_${id.substring(0, 8)}@driveprime.in`;
+
+        try {
+            await db.query(
+                'INSERT INTO users (id, name, email, password_hash, role, phone) VALUES (?, ?, ?, ?, ?, ?)',
+                [userId, name, userEmail, hash, 'dealer', phone || '']
+            );
+        } catch (userErr) {
+            console.error('Failed to create user account for dealership:', userErr);
+        }
+
         const [rows] = await db.query('SELECT * FROM dealerships WHERE id = ?', [id]);
         broadcast('dealerships:changed');
-        res.status(201).json(rowToDealership(rows[0]));
+
+        const responseData = rowToDealership(rows[0]);
+        responseData.tempPassword = tempPassword;
+        responseData.accountEmail = userEmail;
+
+        res.status(201).json(responseData);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
