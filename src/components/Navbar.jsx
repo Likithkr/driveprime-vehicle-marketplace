@@ -45,6 +45,20 @@ export default function Navbar() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    // Sync customer state when login/logout happens across other components
+    useEffect(() => {
+        const handleCustomerChange = () => setCustomerUser(customer.getUser());
+        window.addEventListener('customer_state_change', handleCustomerChange);
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'dp_customer') handleCustomerChange();
+        });
+        return () => {
+            window.removeEventListener('customer_state_change', handleCustomerChange);
+            window.removeEventListener('storage', handleCustomerChange);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     // Allow other components (e.g. BookAppointmentModal) to open the auth modal
     useEffect(() => {
         const handler = () => { setAuthOpen(true); setAuthMode('login'); setAuthError(''); setAuthSuccess(''); };
