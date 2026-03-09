@@ -65,4 +65,21 @@ export const api = {
         markAllRead: (token) => request('/api/messages/read-all', { method: 'PATCH', token }),
         remove: (id, token) => request(`/api/messages/${id}`, { method: 'DELETE', token }),
     },
+    uploads: {
+        // Upload a document scan for a pending listing.
+        // file: File object, pendingId: string, docKey: string, token: JWT.
+        uploadDoc: async (file, pendingId, docKey, token) => {
+            const form = new FormData();
+            form.append('file', file);
+            form.append('pendingId', pendingId);
+            form.append('docKey', docKey);
+            const headers = {};
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+            const res = await fetch(`${BASE}/api/uploads/doc`, { method: 'POST', headers, body: form });
+            if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || `Upload error ${res.status}`); }
+            return res.json();
+        },
+        getDocsByPending: (pendingId, token) => request(`/api/uploads/doc/${pendingId}`, { token }),
+        removeDoc: (id, token) => request(`/api/uploads/doc/${id}`, { method: 'DELETE', token }),
+    },
 };

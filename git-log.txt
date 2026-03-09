@@ -1,0 +1,4 @@
+﻿f66b50e fix: navbar sync on auth state change
+e4592e0 feat: implement profile management, separate admin/customer sessions, and add extended address fields
+e5393f1 Initial commit
+b70a3f9 initial commit

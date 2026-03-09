@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FiArrowLeft, FiCheckCircle, FiXCircle, FiEye, FiMapPin, FiCheck, FiAlertTriangle } from 'react-icons/fi';
+import { FiArrowLeft, FiCheckCircle, FiXCircle, FiEye, FiMapPin, FiCheck, FiAlertTriangle, FiUpload, FiFile, FiTrash2, FiExternalLink, FiLoader } from 'react-icons/fi';
 import { BsSpeedometer2, BsFuelPump } from 'react-icons/bs';
 import { useStore } from '../../store/StoreContext';
 import { useToast } from '../../components/ToastProvider';
 import { useAdmin } from '../../hooks/useAdmin';
 import { useFlags } from '../../context/FlagsContext';
+import { api } from '../../lib/api';
+import { API_BASE } from '../../lib/config';
 
 // All documents admin must physically verify
 const DOC_CHECKLIST = [
@@ -27,16 +29,65 @@ const GRADES = [
     { grade: 'D', label: 'Poor', color: '#dc2626', bg: '#fee2e2', desc: 'Major issues, significant repairs needed' },
 ];
 
-function ReviewPanel({ listing, onApprove, onReject, approving }) {
-    const [docs, setDocs] = useState({});        // { [key]: true/false }
+function ReviewPanel({ listing, onApprove, onReject, approving, adminToken }) {
+    const [docs, setDocs] = useState({});           // { [key]: true/false }
+    const [serverFiles, setServerFiles] = useState({}); // { [docKey]: { id, fileUrl, originalName } }
+    const [uploading, setUploading] = useState({});  // { [key]: true } while loading
     const [grade, setGrade] = useState('');
     const [notes, setNotes] = useState('');
+    const [confirmReject, setConfirmReject] = useState(false);
+    const fileRefs = useRef({});
+    const { addToast } = useToast ? useToast() : { addToast: () => { } };
 
     const requiredDocs = DOC_CHECKLIST.filter(d => d.required);
     const verifiedCount = requiredDocs.filter(d => docs[d.key]).length;
     const allRequiredOk = verifiedCount === requiredDocs.length && grade !== '';
 
+    // Load saved documents from server when the panel opens
+    useEffect(() => {
+        async function loadSaved() {
+            try {
+                const saved = await api.uploads.getDocsByPending(listing.id, adminToken);
+                const byKey = {};
+                const checkedDocs = {};
+                for (const row of saved) {
+                    byKey[row.docKey] = row;
+                    checkedDocs[row.docKey] = true;
+                }
+                setServerFiles(byKey);
+                setDocs(prev => ({ ...prev, ...checkedDocs }));
+            } catch {
+                // Non-fatal — uploads table may not exist yet on first run
+            }
+        }
+        loadSaved();
+    }, [listing.id, adminToken]);
+
     const toggleDoc = (key) => setDocs(prev => ({ ...prev, [key]: !prev[key] }));
+
+    const handleFileUpload = async (key, file) => {
+        if (!file) return;
+        setUploading(prev => ({ ...prev, [key]: true }));
+        try {
+            const result = await api.uploads.uploadDoc(file, listing.id, key, adminToken);
+            setServerFiles(prev => ({ ...prev, [key]: result }));
+            setDocs(prev => ({ ...prev, [key]: true }));
+        } catch (err) {
+            console.error('Upload failed:', err);
+            // Fallback: still show file locally even if server call fails
+        } finally {
+            setUploading(prev => ({ ...prev, [key]: false }));
+        }
+    };
+
+    const removeFile = async (key) => {
+        const record = serverFiles[key];
+        if (record?.id) {
+            try { await api.uploads.removeDoc(record.id, adminToken); } catch { /* ignore */ }
+        }
+        setServerFiles(prev => { const next = { ...prev }; delete next[key]; return next; });
+        // Don't un-check the verified box automatically on removal
+    };
 
     return (
         <div style={{ borderTop: '1px solid var(--border)', background: '#fafafa' }}>
@@ -107,32 +158,82 @@ function ReviewPanel({ listing, onApprove, onReject, approving }) {
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                             {DOC_CHECKLIST.map(doc => (
-                                <label key={doc.key} style={{
-                                    display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer',
-                                    padding: '10px 12px', borderRadius: 'var(--radius)',
-                                    border: `1.5px solid ${docs[doc.key] ? '#22c55e' : 'var(--border)'}`,
-                                    background: docs[doc.key] ? '#f0fdf4' : '#fff',
-                                    transition: 'all 0.15s',
-                                }}>
-                                    <input
-                                        type="checkbox"
-                                        checked={!!docs[doc.key]}
-                                        onChange={() => toggleDoc(doc.key)}
-                                        style={{ marginTop: 2, width: 16, height: 16, accentColor: 'var(--primary)', flexShrink: 0 }}
-                                    />
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                                            <span style={{ fontSize: 14 }}>{doc.emoji}</span>
-                                            <span style={{ fontWeight: 700, fontSize: '0.82rem' }}>{doc.label}</span>
-                                            {doc.required
-                                                ? <span style={{ fontSize: '0.65rem', background: '#fee2e2', color: '#dc2626', padding: '1px 6px', borderRadius: '99px', fontWeight: 700 }}>REQUIRED</span>
-                                                : <span style={{ fontSize: '0.65rem', background: '#f1f5f9', color: '#64748b', padding: '1px 6px', borderRadius: '99px' }}>Optional</span>
-                                            }
+                                <div key={doc.key}>
+                                    <label style={{
+                                        display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer',
+                                        padding: '10px 12px', borderRadius: 'var(--radius)',
+                                        border: `1.5px solid ${docs[doc.key] ? '#22c55e' : 'var(--border)'}`,
+                                        background: docs[doc.key] ? '#f0fdf4' : '#fff',
+                                        transition: 'all 0.15s',
+                                    }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={!!docs[doc.key]}
+                                            onChange={() => toggleDoc(doc.key)}
+                                            style={{ marginTop: 2, width: 16, height: 16, accentColor: 'var(--primary)', flexShrink: 0 }}
+                                        />
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                                <span style={{ fontSize: 14 }}>{doc.emoji}</span>
+                                                <span style={{ fontWeight: 700, fontSize: '0.82rem' }}>{doc.label}</span>
+                                                {doc.required
+                                                    ? <span style={{ fontSize: '0.65rem', background: '#fee2e2', color: '#dc2626', padding: '1px 6px', borderRadius: '99px', fontWeight: 700 }}>REQUIRED</span>
+                                                    : <span style={{ fontSize: '0.65rem', background: '#f1f5f9', color: '#64748b', padding: '1px 6px', borderRadius: '99px' }}>Optional</span>
+                                                }
+                                            </div>
+                                            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>{doc.desc}</p>
                                         </div>
-                                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>{doc.desc}</p>
+                                        {docs[doc.key] && <FiCheck size={16} color="#22c55e" style={{ flexShrink: 0, marginTop: 2 }} />}
+                                    </label>
+                                    {/* File upload row */}
+                                    <input
+                                        type="file"
+                                        accept="image/*,application/pdf"
+                                        ref={el => fileRefs.current[doc.key] = el}
+                                        style={{ display: 'none' }}
+                                        onChange={e => handleFileUpload(doc.key, e.target.files[0])}
+                                    />
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, paddingLeft: 4 }}>
+                                        {uploading[doc.key] ? (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                                                <FiLoader size={12} style={{ animation: 'spin 1s linear infinite' }} /> Uploading…
+                                            </div>
+                                        ) : serverFiles[doc.key] ? (
+                                            <>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 'var(--radius)', padding: '4px 10px', fontSize: '0.78rem', color: '#15803d', flex: 1, minWidth: 0 }}>
+                                                    <FiFile size={12} />
+                                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{serverFiles[doc.key].originalName}</span>
+                                                </div>
+                                                <a href={`${API_BASE}${serverFiles[doc.key].fileUrl}`} target="_blank" rel="noreferrer"
+                                                    style={{ color: 'var(--primary)', display: 'flex', alignItems: 'center', padding: 4, flexShrink: 0 }} title="View file">
+                                                    <FiExternalLink size={13} />
+                                                </a>
+                                                <button type="button" onClick={() => removeFile(doc.key)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', padding: 4 }} title="Delete file">
+                                                    <FiTrash2 size={13} />
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <button type="button" onClick={() => fileRefs.current[doc.key]?.click()}
+                                                style={{
+                                                    fontSize: '0.78rem', fontWeight: 600,
+                                                    color: '#fff',
+                                                    background: 'linear-gradient(135deg, var(--primary), #f97316)',
+                                                    border: 'none',
+                                                    borderRadius: '99px',
+                                                    padding: '6px 14px',
+                                                    cursor: 'pointer',
+                                                    display: 'flex', alignItems: 'center', gap: 6,
+                                                    boxShadow: '0 2px 8px rgba(249,115,22,0.35)',
+                                                    transition: 'opacity 0.15s, transform 0.15s',
+                                                }}
+                                                onMouseEnter={e => { e.currentTarget.style.opacity = '0.88'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                                                onMouseLeave={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                                            >
+                                                <FiUpload size={12} /> Upload scan
+                                            </button>
+                                        )}
                                     </div>
-                                    {docs[doc.key] && <FiCheck size={16} color="#22c55e" style={{ flexShrink: 0, marginTop: 2 }} />}
-                                </label>
+                                </div>
                             ))}
                         </div>
                     </div>
@@ -194,21 +295,36 @@ function ReviewPanel({ listing, onApprove, onReject, approving }) {
                     )}
 
                     {/* Actions */}
-                    <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-                        <button onClick={() => onReject(listing.id)}
-                            className="btn btn-sm"
-                            style={{ background: '#fee2e2', color: '#dc2626', fontWeight: 700, flex: 1, justifyContent: 'center' }}>
-                            <FiXCircle size={14} /> Reject
-                        </button>
-                        <button
-                            onClick={() => onApprove(listing.id, { grade, notes, verifiedDocs: Object.keys(docs).filter(k => docs[k]) })}
-                            className="btn btn-primary"
-                            disabled={approving === listing.id || !allRequiredOk}
-                            style={{ flex: 2, justifyContent: 'center', opacity: !allRequiredOk ? 0.5 : 1 }}
-                        >
-                            <FiCheckCircle size={15} />
-                            {approving === listing.id ? 'Approving…' : `Approve & Publish${grade ? ` (Grade ${grade})` : ''}`}
-                        </button>
+                    <div style={{ display: 'flex', gap: 10, marginTop: 4, flexDirection: 'column' }}>
+                        {confirmReject ? (
+                            <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 'var(--radius)', padding: '12px 16px' }}>
+                                <p style={{ fontWeight: 700, fontSize: '0.875rem', color: '#dc2626', marginBottom: 8 }}>⚠️ Reject this submission?</p>
+                                <p style={{ fontSize: '0.8rem', color: '#7f1d1d', marginBottom: 12 }}>This will permanently delete the submission and cannot be undone.</p>
+                                <div style={{ display: 'flex', gap: 8 }}>
+                                    <button onClick={() => setConfirmReject(false)} className="btn btn-outline btn-sm" style={{ flex: 1 }}>Cancel</button>
+                                    <button onClick={() => onReject(listing.id)} className="btn btn-sm" style={{ flex: 1, background: '#dc2626', color: '#fff', fontWeight: 700 }}>
+                                        <FiXCircle size={14} /> Yes, Reject
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', gap: 10 }}>
+                                <button onClick={() => setConfirmReject(true)}
+                                    className="btn btn-sm"
+                                    style={{ background: '#fee2e2', color: '#dc2626', fontWeight: 700, flex: 1, justifyContent: 'center' }}>
+                                    <FiXCircle size={14} /> Reject
+                                </button>
+                                <button
+                                    onClick={() => onApprove(listing.id, { grade, notes, verifiedDocs: Object.keys(docs).filter(k => docs[k]) })}
+                                    className="btn btn-primary"
+                                    disabled={approving === listing.id || !allRequiredOk}
+                                    style={{ flex: 2, justifyContent: 'center', opacity: !allRequiredOk ? 0.5 : 1 }}
+                                >
+                                    <FiCheckCircle size={15} />
+                                    {approving === listing.id ? 'Approving…' : `Approve & Publish${grade ? ` (Grade ${grade})` : ''}`}
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -253,11 +369,13 @@ export default function AdminReviewPage() {
         }
     };
 
-    const handleReject = (id) => {
-        if (window.confirm('Reject and remove this submission?')) {
-            dispatch({ type: 'REJECT_LISTING', payload: id });
+    const handleReject = async (id) => {
+        try {
+            await dispatch({ type: 'REJECT_LISTING', payload: id });
             addToast('Submission rejected.', 'info');
             setExpanded(null);
+        } catch (err) {
+            addToast(`Reject failed: ${err.message}`, 'error');
         }
     };
 
@@ -351,6 +469,7 @@ export default function AdminReviewPage() {
                                         onApprove={handleApprove}
                                         onReject={handleReject}
                                         approving={approving}
+                                        adminToken={admin.getToken()}
                                     />
                                 )}
                             </div>

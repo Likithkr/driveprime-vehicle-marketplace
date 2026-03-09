@@ -7,6 +7,7 @@ import { BRANDS, FUEL_TYPES, TRANSMISSIONS, OWNERSHIP_OPTIONS, INDIA_STATES, VEH
 import { api } from '../../lib/api';
 import { useAdmin } from '../../hooks/useAdmin';
 import PinCodeInput from '../../components/PinCodeInput';
+import { FiArrowLeft, FiSave, FiCheck, FiMapPin, FiAlertTriangle } from 'react-icons/fi';
 
 // Documents admin must physically collect and verify
 const DOC_CHECKLIST = [

@@ -140,45 +140,8 @@ export default function AdminDashboard() {
                     ))}
                 </div>
 
-                {/* Quick links */}
-                <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, marginBottom: '20px', fontSize: '1.2rem' }}>Quick Actions</h2>
-                <div className="grid-3" style={{ marginBottom: '40px' }}>
-                    {quickLinks.map(({ to, icon: Icon, label, desc, locked, badge }) => (
-                        <Link key={to} to={to} style={{
-                            background: locked ? '#f8fafc' : '#fff',
-                            borderRadius: 'var(--radius-lg)',
-                            border: `1px solid ${locked ? '#e2e8f0' : 'var(--border)'}`,
-                            padding: '28px', boxShadow: 'var(--shadow)', display: 'block',
-                            transition: 'var(--transition)',
-                            opacity: locked ? 0.65 : 1,
-                            pointerEvents: locked ? 'none' : 'auto',
-                        }}>
-                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
-                                <div style={{
-                                    width: 48, height: 48, borderRadius: '12px',
-                                    background: locked ? 'rgba(100,116,139,0.1)' : 'rgba(249,115,22,0.1)',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                }}>
-                                    <Icon size={24} style={{ color: locked ? '#94a3b8' : 'var(--primary)' }} />
-                                </div>
-                                {badge && (
-                                    <span style={{ background: '#dc2626', color: '#fff', fontWeight: 800, fontSize: '0.72rem', padding: '3px 9px', borderRadius: 99 }}>
-                                        {badge}
-                                    </span>
-                                )}
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                                <h3 style={{ fontWeight: 700 }}>{label}</h3>
-                                {locked && <span style={{ fontSize: '0.7rem', background: '#e2e8f0', color: '#64748b', padding: '2px 7px', borderRadius: '99px', fontWeight: 600 }}>DEV ONLY</span>}
-                                {!locked && label === 'Feature Flags' && <span style={{ fontSize: '0.7rem', background: '#dcfce7', color: '#16a34a', padding: '2px 7px', borderRadius: '99px', fontWeight: 600 }}>ACTIVE</span>}
-                            </div>
-                            <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>{desc}</p>
-                        </Link>
-                    ))}
-                </div>
-
                 {/* Bottom two-column layout */}
-                <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: 24, alignItems: 'flex-start' }}
+                <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: 24, alignItems: 'flex-start', marginBottom: '40px' }}
                     className="dashboard-bottom">
                     <style>{`@media(max-width:900px){.dashboard-bottom{grid-template-columns:1fr!important}}`}</style>
 
@@ -300,8 +263,44 @@ export default function AdminDashboard() {
                         )}
                     </div>
                 </div>
-            </div>
 
+                {/* Quick links */}
+                <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, marginBottom: '20px', fontSize: '1.2rem' }}>Quick Actions</h2>
+                <div className="grid-3" style={{ marginBottom: '40px' }}>
+                    {quickLinks.map(({ to, icon: Icon, label, desc, locked, badge }) => (
+                        <Link key={to} to={to} style={{
+                            background: locked ? '#f8fafc' : '#fff',
+                            borderRadius: 'var(--radius-lg)',
+                            border: `1px solid ${locked ? '#e2e8f0' : 'var(--border)'}`,
+                            padding: '28px', boxShadow: 'var(--shadow)', display: 'block',
+                            transition: 'var(--transition)',
+                            opacity: locked ? 0.65 : 1,
+                            pointerEvents: locked ? 'none' : 'auto',
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
+                                <div style={{
+                                    width: 48, height: 48, borderRadius: '12px',
+                                    background: locked ? 'rgba(100,116,139,0.1)' : 'rgba(249,115,22,0.1)',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                }}>
+                                    <Icon size={24} style={{ color: locked ? '#94a3b8' : 'var(--primary)' }} />
+                                </div>
+                                {badge && (
+                                    <span style={{ background: '#dc2626', color: '#fff', fontWeight: 800, fontSize: '0.72rem', padding: '3px 9px', borderRadius: 99 }}>
+                                        {badge}
+                                    </span>
+                                )}
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                                <h3 style={{ fontWeight: 700 }}>{label}</h3>
+                                {locked && <span style={{ fontSize: '0.7rem', background: '#e2e8f0', color: '#64748b', padding: '2px 7px', borderRadius: '99px', fontWeight: 600 }}>DEV ONLY</span>}
+                                {!locked && label === 'Feature Flags' && <span style={{ fontSize: '0.7rem', background: '#dcfce7', color: '#16a34a', padding: '2px 7px', borderRadius: '99px', fontWeight: 600 }}>ACTIVE</span>}
+                            </div>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>{desc}</p>
+                        </Link>
+                    ))}
+                </div>
+            </div>
 
             {/* Change Password Modal */}
             {showPasswordModal && (
@@ -317,7 +316,6 @@ export default function AdminDashboard() {
                         <form onSubmit={handlePasswordChange} style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
                             {pwdError && <div style={{ background: '#fee2e2', color: '#dc2626', padding: '10px 14px', borderRadius: 8, fontSize: '0.85rem' }}>{pwdError}</div>}
                             {pwdSuccess && <div style={{ background: '#dcfce7', color: '#16a34a', padding: '10px 14px', borderRadius: 8, fontSize: '0.85rem' }}>{pwdSuccess}</div>}
-
                             <div>
                                 <label className="form-label">Current Password</label>
                                 <input type="password" required className="form-input" value={pwdForm.current} onChange={e => setPwdForm({ ...pwdForm, current: e.target.value })} />
@@ -330,7 +328,6 @@ export default function AdminDashboard() {
                                 <label className="form-label">Confirm New Password</label>
                                 <input type="password" required className="form-input" value={pwdForm.confirm} onChange={e => setPwdForm({ ...pwdForm, confirm: e.target.value })} />
                             </div>
-
                             <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
                                 <button type="button" onClick={() => setShowPasswordModal(false)} className="btn btn-outline" style={{ flex: 1 }}>Cancel</button>
                                 <button type="submit" disabled={pwdLoading} className="btn btn-primary" style={{ flex: 1 }}>
@@ -344,3 +341,4 @@ export default function AdminDashboard() {
         </div>
     );
 }
+

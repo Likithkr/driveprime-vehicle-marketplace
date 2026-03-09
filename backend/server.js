@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const setup = require('./setup');
 const { addClient } = require('./sse');
 
@@ -20,6 +21,9 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '10mb' })); // images are base64-encoded strings
 
+// ── Static file serving (uploaded documents) ─────────────────────────────────
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // ── Routes ───────────────────────────────────────────────────────────────────
 app.use('/api/listings', require('./routes/listings'));
 app.use('/api/pending', require('./routes/pending'));
@@ -31,6 +35,7 @@ app.use('/api/settings', require('./routes/settings'));
 app.use('/api/appointments', require('./routes/appointments'));
 app.use('/api/dealerships', require('./routes/dealerships'));
 app.use('/api/messages', require('./routes/messages'));
+app.use('/api/uploads', require('./routes/uploads'));
 
 // Health check
 app.get('/api/health', (_, res) => res.json({ status: 'ok', time: new Date() }));

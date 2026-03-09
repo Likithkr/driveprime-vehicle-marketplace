@@ -334,6 +334,21 @@ async function setup() {
         if (!err.message.includes('column')) console.warn('images column migration skipped:', err.message);
     }
 
+    // ── doc_uploads table ─────────────────────────────────────────────────────
+    await conn.query(`
+        CREATE TABLE IF NOT EXISTS doc_uploads (
+            id            VARCHAR(36)  PRIMARY KEY,
+            pending_id    VARCHAR(36)  NOT NULL,
+            doc_key       VARCHAR(50)  NOT NULL,
+            original_name VARCHAR(300) NOT NULL,
+            file_url      VARCHAR(500) NOT NULL,
+            mime_type     VARCHAR(100) DEFAULT '',
+            file_size     INT          DEFAULT 0,
+            uploaded_at   TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_pending_id (pending_id)
+        )
+    `);
+
     console.log(`✅  Database "${db}" and tables are ready.`);
     await conn.end();
 
