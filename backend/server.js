@@ -31,6 +31,8 @@ app.use('/api/settings', require('./routes/settings'));
 app.use('/api/appointments', require('./routes/appointments'));
 app.use('/api/dealerships', require('./routes/dealerships'));
 app.use('/api/messages', require('./routes/messages'));
+app.use('/api/banners', require('./routes/banners'));
+app.use('/api/carousel', require('./routes/carousel'));
 
 // Health check
 app.get('/api/health', (_, res) => res.json({ status: 'ok', time: new Date() }));

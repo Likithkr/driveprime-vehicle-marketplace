@@ -71,29 +71,31 @@ async function seed() {
 
     for (const l of mockListings) {
         await db.query(
-            `INSERT IGNORE INTO listings
+            `INSERT INTO listings
              (id, brand, model, variant, type, year, km, fuel, transmission,
               ownership, insurance, color, state, city, location, about, price,
               images, dealer_name, dealer_phone, dealer_email, dealer_whatsapp,
               status, featured)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)
+             ON CONFLICT (id) DO NOTHING`,
             [
                 l.id, l.brand, l.model, l.variant, l.type, l.year, l.km,
                 l.fuel, l.transmission, l.ownership, l.insurance, l.color,
                 l.state, l.city, l.location, l.about, l.price,
                 JSON.stringify(l.images), l.dealerName, l.dealerPhone,
-                l.dealerEmail, l.dealerWhatsApp, l.status, l.featured ? 1 : 0,
+                l.dealerEmail, l.dealerWhatsApp, l.status, l.featured,
             ]
         );
     }
 
     for (const l of mockPending) {
         await db.query(
-            `INSERT IGNORE INTO pending_listings
+            `INSERT INTO pending_listings
              (id, brand, model, variant, type, year, km, fuel, transmission,
               ownership, insurance, color, state, city, location, about, price,
               images, dealer_name, dealer_phone, dealer_email, dealer_whatsapp, submitted_at)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
+             ON CONFLICT (id) DO NOTHING`,
             [
                 l.id, l.brand, l.model, l.variant, l.type, l.year, l.km,
                 l.fuel, l.transmission, l.ownership, l.insurance, l.color,

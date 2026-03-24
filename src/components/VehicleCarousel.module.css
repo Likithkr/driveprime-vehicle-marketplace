@@ -1,0 +1,315 @@
+/* ── Section wrapper ─────────────────────────────────────────────────────── */
+.section {
+    padding: 48px 0 0;
+    background: var(--bg);
+}
+
+.sectionHeader {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.sectionTitle {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.5rem;
+    flex: 1;
+}
+
+.sectionSub {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+/* ── Dots ────────────────────────────────────────────────────────────────── */
+.dots {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin-left: auto;
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+    border: none;
+    cursor: pointer;
+    transition: all 0.25s;
+    padding: 0;
+}
+
+.dotActive {
+    width: 24px;
+    border-radius: 99px;
+    background: var(--primary);
+}
+
+/* ── Main banner ─────────────────────────────────────────────────────────── */
+.banner {
+    position: relative;
+    overflow: hidden;
+    min-height: 380px;
+    display: flex;
+    align-items: center;
+}
+
+/* Slide-in animations */
+@keyframes fromRight {
+    from { opacity: 0; transform: translateX(60px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes fromLeft {
+    from { opacity: 0; transform: translateX(-60px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+
+.slideNext { animation: fromRight 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
+.slidePrev { animation: fromLeft  0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
+
+/* Decorative circles */
+.deco1 {
+    position: absolute;
+    width: 420px;
+    height: 420px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.03);
+    top: -120px;
+    right: 30%;
+    pointer-events: none;
+}
+
+.deco2 {
+    position: absolute;
+    width: 240px;
+    height: 240px;
+    border-radius: 50%;
+    background: rgba(249, 115, 22, 0.06);
+    bottom: -60px;
+    left: 10%;
+    pointer-events: none;
+}
+
+/* ── Inner layout ────────────────────────────────────────────────────────── */
+.bannerInner {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    gap: 40px;
+    padding-top: 48px;
+    padding-bottom: 48px;
+    position: relative;
+    z-index: 1;
+}
+
+/* ── LEFT — Text ─────────────────────────────────────────────────────────── */
+.textSide {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.brandPill {
+    display: inline-flex;
+    align-self: flex-start;
+    background: rgba(249, 115, 22, 0.18);
+    border: 1px solid rgba(249, 115, 22, 0.35);
+    color: #fbbf24;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    padding: 5px 14px;
+    border-radius: 99px;
+}
+
+.carName {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: clamp(1.8rem, 4vw, 3rem);
+    line-height: 1.1;
+}
+
+.accentWord {
+    color: #fbbf24; /* yellow accent — like the reference */
+}
+
+.whiteWord {
+    color: #ffffff;
+}
+
+.price {
+    font-family: var(--font-display);
+    font-size: clamp(1.6rem, 3vw, 2.4rem);
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: -0.5px;
+}
+
+/* ── Spec chips ──────────────────────────────────────────────────────────── */
+.specRow {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.specChip {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 99px;
+    backdrop-filter: blur(4px);
+    white-space: nowrap;
+}
+
+.location {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 0.85rem;
+}
+
+/* ── CTA button ──────────────────────────────────────────────────────────── */
+.ctaBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    align-self: flex-start;
+    background: #fff;
+    color: #0f172a;
+    border: 2px solid #fff;
+    font-weight: 800;
+    font-size: 0.95rem;
+    padding: 13px 28px;
+    border-radius: 10px;
+    text-decoration: none;
+    transition: all 0.2s;
+    margin-top: 4px;
+}
+
+.ctaBtn:hover {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(249, 115, 22, 0.35);
+}
+
+/* ── RIGHT — Image ───────────────────────────────────────────────────────── */
+.imageSide {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    height: 300px;
+}
+
+.carImg {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.5));
+    animation: floatCar 3s ease-in-out infinite;
+}
+
+@keyframes floatCar {
+    0%, 100% { transform: translateY(0);    }
+    50%       { transform: translateY(-8px); }
+}
+
+.noImg {
+    font-size: 6rem;
+    opacity: 0.2;
+}
+
+/* Radial glow behind car */
+.glow {
+    position: absolute;
+    bottom: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80%;
+    height: 40px;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 50%;
+    filter: blur(16px);
+    z-index: -1;
+}
+
+/* ── Navigation arrows ───────────────────────────────────────────────────── */
+.arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1.5px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    transition: all 0.2s;
+    backdrop-filter: blur(6px);
+}
+
+.arrow:hover {
+    background: var(--primary);
+    border-color: var(--primary);
+    transform: translateY(-50%) scale(1.08);
+}
+
+.arrowLeft  { left: 20px; }
+.arrowRight { right: 20px; }
+
+/* Slide counter */
+.counter {
+    position: absolute;
+    bottom: 16px;
+    right: 24px;
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .bannerInner {
+        grid-template-columns: 1fr;
+        padding-top: 36px;
+        padding-bottom: 0;
+    }
+
+    .imageSide {
+        height: 200px;
+        margin-bottom: -4px;
+    }
+
+    .carName {
+        font-size: 1.8rem;
+    }
+
+    .price {
+        font-size: 1.6rem;
+    }
+
+    .arrow {
+        width: 36px;
+        height: 36px;
+    }
+
+    .arrowLeft  { left: 10px; }
+    .arrowRight { right: 10px; }
+}

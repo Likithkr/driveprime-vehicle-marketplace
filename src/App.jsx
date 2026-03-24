@@ -27,6 +27,8 @@ import AdminSettingsPage from './pages/admin/AdminSettingsPage';
 import AdminAppointmentsPage from './pages/admin/AdminAppointmentsPage';
 import AdminDealershipsPage from './pages/admin/AdminDealershipsPage';
 import AdminMessagesPage from './pages/admin/AdminMessagesPage';
+import AdminBannersPage from './pages/admin/AdminBannersPage';
+import AdminCarouselPage from './pages/admin/AdminCarouselPage';
 
 // Admin layout wrapper (no nav/footer)
 function AdminLayout({ children }) {
@@ -75,6 +77,8 @@ export default function App() {
             <Route path="/admin/appointments" element={<AdminAppointmentsPage />} />
             <Route path="/admin/dealerships" element={<AdminDealershipsPage />} />
             <Route path="/admin/messages" element={<AdminMessagesPage />} />
+            <Route path="/admin/banners" element={<AdminBannersPage />} />
+            <Route path="/admin/carousel" element={<AdminCarouselPage />} />
 
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />

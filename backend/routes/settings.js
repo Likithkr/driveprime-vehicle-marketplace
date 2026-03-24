@@ -7,8 +7,7 @@ const { broadcast } = require('../sse');
 // GET /api/settings — public (frontend reads on startup)
 router.get('/', async (req, res) => {
     try {
-        const [rows] = await db.query('SELECT * FROM settings ORDER BY `key` ASC');
-        // Return as { key: value }
+        const [rows] = await db.query('SELECT * FROM settings ORDER BY "key" ASC');
         const settings = {};
         for (const row of rows) {
             settings[row.key] = row.value;
@@ -22,7 +21,7 @@ router.get('/', async (req, res) => {
 // GET /api/settings/all — developers only (returns full rows including metadata)
 router.get('/all', requireDeveloper, async (req, res) => {
     try {
-        const [rows] = await db.query('SELECT * FROM settings ORDER BY `key` ASC');
+        const [rows] = await db.query('SELECT * FROM settings ORDER BY "key" ASC');
         res.json(rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -34,10 +33,10 @@ router.put('/:key', requireDeveloper, async (req, res) => {
     const { value } = req.body;
     try {
         await db.query(
-            'UPDATE settings SET value = ?, updated_by = ?, updated_at = NOW() WHERE `key` = ?',
+            'UPDATE settings SET value = $1, updated_by = $2, updated_at = NOW() WHERE "key" = $3',
             [String(value), req.user.email, req.params.key]
         );
-        const [rows] = await db.query('SELECT * FROM settings WHERE `key` = ?', [req.params.key]);
+        const [rows] = await db.query('SELECT * FROM settings WHERE "key" = $1', [req.params.key]);
         broadcast('settings:changed');
         res.json(rows[0]);
     } catch (err) {

@@ -41,35 +41,18 @@ async function sendConfirmationEmail(appt) {
         </div>
         <div style="background: #fff; border: 1px solid #e2e8f0; border-top: none; padding: 28px; border-radius: 0 0 16px 16px;">
             <p style="font-size: 1rem; margin-bottom: 20px;">Hi <strong>${appt.customer_name}</strong>, your in-person viewing appointment has been confirmed by Drive Prime. Here are your details:</p>
-
             <table style="width:100%; border-collapse:collapse; margin-bottom: 24px;">
-                <tr style="background:#f8fafc;">
-                    <td style="padding:12px; font-weight:700; border-bottom:1px solid #e2e8f0; width:40%;">🚗 Vehicle</td>
-                    <td style="padding:12px; border-bottom:1px solid #e2e8f0;">${appt.car_name}</td>
-                </tr>
-                <tr>
-                    <td style="padding:12px; font-weight:700; border-bottom:1px solid #e2e8f0;">📅 Date</td>
-                    <td style="padding:12px; border-bottom:1px solid #e2e8f0;">${fmtDate(appt.confirmed_date)}</td>
-                </tr>
-                <tr style="background:#f8fafc;">
-                    <td style="padding:12px; font-weight:700; border-bottom:1px solid #e2e8f0;">🕐 Time</td>
-                    <td style="padding:12px; border-bottom:1px solid #e2e8f0;">${appt.confirmed_time || 'TBD'}</td>
-                </tr>
-                <tr>
-                    <td style="padding:12px; font-weight:700;">📍 Location</td>
-                    <td style="padding:12px;">${appt.confirmed_location || 'TBD'}</td>
-                </tr>
+                <tr style="background:#f8fafc;"><td style="padding:12px; font-weight:700; border-bottom:1px solid #e2e8f0; width:40%;">🚗 Vehicle</td><td style="padding:12px; border-bottom:1px solid #e2e8f0;">${appt.car_name}</td></tr>
+                <tr><td style="padding:12px; font-weight:700; border-bottom:1px solid #e2e8f0;">📅 Date</td><td style="padding:12px; border-bottom:1px solid #e2e8f0;">${fmtDate(appt.confirmed_date)}</td></tr>
+                <tr style="background:#f8fafc;"><td style="padding:12px; font-weight:700; border-bottom:1px solid #e2e8f0;">🕐 Time</td><td style="padding:12px; border-bottom:1px solid #e2e8f0;">${appt.confirmed_time || 'TBD'}</td></tr>
+                <tr><td style="padding:12px; font-weight:700;">📍 Location</td><td style="padding:12px;">${appt.confirmed_location || 'TBD'}</td></tr>
             </table>
-
             <p style="color:#64748b; font-size:0.9rem;">If you have any questions, feel free to reach out to us via WhatsApp or phone.</p>
-            <a href="${waLink}" style="display:inline-block; background:#25D366; color:#fff; padding:12px 28px; border-radius:99px; text-decoration:none; font-weight:700; margin-top:8px;">
-                💬 Open WhatsApp Chat
-            </a>
+            <a href="${waLink}" style="display:inline-block; background:#25D366; color:#fff; padding:12px 28px; border-radius:99px; text-decoration:none; font-weight:700; margin-top:8px;">💬 Open WhatsApp Chat</a>
             <hr style="margin:24px 0; border:none; border-top:1px solid #e2e8f0;" />
             <p style="font-size:0.8rem; color:#94a3b8; text-align:center;">Drive Prime · Auto Marketplace</p>
         </div>
     </div>`;
-
     await mailer.sendMail({
         from: process.env.SMTP_FROM || '"Drive Prime" <noreply@driveprime.in>',
         to: appt.customer_email,
@@ -93,7 +76,6 @@ async function sendCancellationEmail(appt) {
             <p style="font-size:0.8rem; color:#94a3b8; text-align:center;">Drive Prime · Auto Marketplace</p>
         </div>
     </div>`;
-
     await mailer.sendMail({
         from: process.env.SMTP_FROM || '"Drive Prime" <noreply@driveprime.in>',
         to: appt.customer_email,
@@ -119,19 +101,16 @@ router.post('/', requireAuth, async (req, res) => {
     if (!listing_id || !preferred_date) {
         return res.status(400).json({ error: 'listing_id and preferred_date are required' });
     }
-
-    // Pull customer details from the JWT user (no manual input needed)
     const { id: user_id, name: customer_name, email: customer_email, phone: customer_phone } = req.user;
     if (!customer_email) return res.status(400).json({ error: 'Your account email is missing. Please update your profile.' });
 
     const id = crypto.randomUUID();
     await db.query(
         `INSERT INTO appointments (id, listing_id, car_name, user_id, customer_name, customer_email, customer_phone, preferred_date, message)
-         VALUES (?,?,?,?,?,?,?,?,?)`,
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
         [id, listing_id, car_name || '', user_id, customer_name, customer_email, customer_phone || '', preferred_date, message]
     );
-
-    const [rows] = await db.query('SELECT * FROM appointments WHERE id = ?', [id]);
+    const [rows] = await db.query('SELECT * FROM appointments WHERE id = $1', [id]);
     res.status(201).json(rows[0]);
 });
 
@@ -144,7 +123,7 @@ router.get('/', requireAdmin, async (req, res) => {
 // ── GET /api/appointments/mine — customer: own appointments ───────────────────
 router.get('/mine', requireAuth, async (req, res) => {
     const [rows] = await db.query(
-        'SELECT * FROM appointments WHERE user_id = ? ORDER BY created_at DESC',
+        'SELECT * FROM appointments WHERE user_id = $1 ORDER BY created_at DESC',
         [req.user.id]
     );
     res.json(rows);
@@ -156,17 +135,13 @@ router.patch('/:id/confirm', requireAdmin, async (req, res) => {
     if (!confirmed_date || !confirmed_time || !confirmed_location) {
         return res.status(400).json({ error: 'confirmed_date, confirmed_time, and confirmed_location are required' });
     }
-
     await db.query(
-        `UPDATE appointments SET status='confirmed', confirmed_date=?, confirmed_time=?, confirmed_location=? WHERE id=?`,
+        `UPDATE appointments SET status='confirmed', confirmed_date=$1, confirmed_time=$2, confirmed_location=$3 WHERE id=$4`,
         [confirmed_date, confirmed_time, confirmed_location, req.params.id]
     );
-
-    const [rows] = await db.query('SELECT * FROM appointments WHERE id = ?', [req.params.id]);
+    const [rows] = await db.query('SELECT * FROM appointments WHERE id = $1', [req.params.id]);
     if (!rows.length) return res.status(404).json({ error: 'Appointment not found' });
     const appt = rows[0];
-
-    // Send email + WhatsApp notifications (non-blocking)
     Promise.allSettled([
         sendConfirmationEmail(appt),
         sendWhatsApp(
@@ -182,32 +157,28 @@ router.patch('/:id/confirm', requireAdmin, async (req, res) => {
             if (r.status === 'rejected') console.warn(`[appointments] notification ${i} failed:`, r.reason?.message);
         });
     });
-
     broadcast('appointments:changed');
     res.json(appt);
 });
 
 // ── PATCH /api/appointments/:id/cancel — admin cancels ───────────────────────
 router.patch('/:id/cancel', requireAdmin, async (req, res) => {
-    await db.query(`UPDATE appointments SET status='cancelled' WHERE id=?`, [req.params.id]);
-
-    const [rows] = await db.query('SELECT * FROM appointments WHERE id = ?', [req.params.id]);
+    await db.query(`UPDATE appointments SET status='cancelled' WHERE id=$1`, [req.params.id]);
+    const [rows] = await db.query('SELECT * FROM appointments WHERE id = $1', [req.params.id]);
     if (!rows.length) return res.status(404).json({ error: 'Appointment not found' });
     const appt = rows[0];
-
-    // Send cancellation email (non-blocking)
     sendCancellationEmail(appt).catch(err =>
         console.warn('[appointments] cancellation email failed:', err.message)
     );
-
     broadcast('appointments:changed');
     res.json(appt);
 });
 
 // ── DELETE /api/appointments/:id — admin hard-deletes ────────────────────────
 router.delete('/:id', requireAdmin, async (req, res) => {
-    const [result] = await db.query('DELETE FROM appointments WHERE id = ?', [req.params.id]);
-    if (result.affectedRows === 0) return res.status(404).json({ error: 'Appointment not found' });
+    // RETURNING id lets us check if the row existed (replaces affectedRows)
+    const [rows] = await db.query('DELETE FROM appointments WHERE id = $1 RETURNING id', [req.params.id]);
+    if (rows.length === 0) return res.status(404).json({ error: 'Appointment not found' });
     broadcast('appointments:changed');
     res.json({ success: true });
 });

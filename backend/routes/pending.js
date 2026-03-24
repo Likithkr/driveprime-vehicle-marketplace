@@ -62,7 +62,7 @@ router.post('/', async (req, res) => {
               ownership, insurance, color, state, district, taluk, town, city, pincode, address, location, about, price,
               images, dealer_name, dealer_phone, dealer_email, dealer_whatsapp, submitted_at,
               dealership_id, dealership_name)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30)`,
             [
                 id, l.brand, l.model, l.variant, l.type || 'Car',
                 l.year, l.km, l.fuel, l.transmission, l.ownership,
@@ -75,7 +75,7 @@ router.post('/', async (req, res) => {
                 l.dealershipId || null, l.dealershipName || null,
             ]
         );
-        const [rows] = await db.query('SELECT * FROM pending_listings WHERE id = ?', [id]);
+        const [rows] = await db.query('SELECT * FROM pending_listings WHERE id = $1', [id]);
         broadcast('pending:changed');
         res.status(201).json(rowToPending(rows[0]));
     } catch (err) {
@@ -88,7 +88,7 @@ router.post('/:id/approve', async (req, res) => {
     const conn = await db.getConnection();
     try {
         await conn.beginTransaction();
-        const [pending] = await conn.query('SELECT * FROM pending_listings WHERE id = ?', [req.params.id]);
+        const [pending] = await conn.query('SELECT * FROM pending_listings WHERE id = $1', [req.params.id]);
         if (!pending.length) {
             await conn.rollback();
             return res.status(404).json({ error: 'Pending listing not found' });
@@ -101,22 +101,21 @@ router.post('/:id/approve', async (req, res) => {
               ownership, insurance, color, state, district, taluk, town, city, pincode, address, location, about, price,
               images, dealer_name, dealer_phone, dealer_email, dealer_whatsapp,
               status, featured, dealership_id, dealership_name)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31)`,
             [
                 newId, l.brand, l.model, l.variant, l.type, l.year, l.km,
                 l.fuel, l.transmission, l.ownership, l.insurance, l.color,
                 l.state, l.district, l.taluk, l.town, l.city, l.pincode, l.address, l.location, l.about, l.price,
                 JSON.stringify(typeof l.images === 'string' ? JSON.parse(l.images) : (l.images || [])),
                 l.dealer_name, l.dealer_phone, l.dealer_email, l.dealer_whatsapp,
-                'live', 0,
+                'live', false,
                 l.dealership_id || null, l.dealership_name || null,
             ]
         );
-        await conn.query('DELETE FROM pending_listings WHERE id = ?', [req.params.id]);
+        await conn.query('DELETE FROM pending_listings WHERE id = $1', [req.params.id]);
         await conn.commit();
 
-        const [rows] = await db.query('SELECT * FROM listings WHERE id = ?', [newId]);
-        // Notify all tabs: both listings and pending changed
+        const [rows] = await db.query('SELECT * FROM listings WHERE id = $1', [newId]);
         broadcast('listings:changed');
         broadcast('pending:changed');
         res.json({ approved: true, listing: rows[0] });
@@ -131,7 +130,7 @@ router.post('/:id/approve', async (req, res) => {
 // DELETE /api/pending/:id — reject a submission
 router.delete('/:id', async (req, res) => {
     try {
-        await db.query('DELETE FROM pending_listings WHERE id = ?', [req.params.id]);
+        await db.query('DELETE FROM pending_listings WHERE id = $1', [req.params.id]);
         broadcast('pending:changed');
         res.json({ success: true });
     } catch (err) {

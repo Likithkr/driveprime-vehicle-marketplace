@@ -63,7 +63,7 @@ router.post('/', async (req, res) => {
               ownership, insurance, color, state, district, taluk, town, city, pincode, address, location, about, price,
               images, dealer_name, dealer_phone, dealer_email, dealer_whatsapp,
               status, featured, dealership_id, dealership_name)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31)`,
             [
                 id, l.brand, l.model, l.variant, l.type || 'Car',
                 l.year, l.km, l.fuel, l.transmission, l.ownership,
@@ -72,11 +72,11 @@ router.post('/', async (req, res) => {
                 l.about, l.price,
                 JSON.stringify(l.images || []),
                 l.dealerName, l.dealerPhone, l.dealerEmail, l.dealerWhatsApp,
-                l.status || 'live', l.featured ? 1 : 0,
+                l.status || 'live', l.featured ? true : false,
                 l.dealershipId || null, l.dealershipName || null,
             ]
         );
-        const [rows] = await db.query('SELECT * FROM listings WHERE id = ?', [id]);
+        const [rows] = await db.query('SELECT * FROM listings WHERE id = $1', [id]);
         const listing = rowToListing(rows[0]);
         broadcast('listings:changed');
         res.status(201).json(listing);
@@ -91,12 +91,12 @@ router.put('/:id', async (req, res) => {
         const l = req.body;
         await db.query(
             `UPDATE listings SET
-              brand=?, model=?, variant=?, type=?, year=?, km=?, fuel=?,
-              transmission=?, ownership=?, insurance=?, color=?, state=?, district=?, taluk=?, town=?, city=?, pincode=?, address=?,
-              location=?, about=?, price=?, images=?, dealer_name=?, dealer_phone=?,
-              dealer_email=?, dealer_whatsapp=?, status=?, featured=?,
-              dealership_id=?, dealership_name=?
-             WHERE id=?`,
+              brand=$1, model=$2, variant=$3, type=$4, year=$5, km=$6, fuel=$7,
+              transmission=$8, ownership=$9, insurance=$10, color=$11, state=$12, district=$13, taluk=$14, town=$15, city=$16, pincode=$17, address=$18,
+              location=$19, about=$20, price=$21, images=$22, dealer_name=$23, dealer_phone=$24,
+              dealer_email=$25, dealer_whatsapp=$26, status=$27, featured=$28,
+              dealership_id=$29, dealership_name=$30
+             WHERE id=$31`,
             [
                 l.brand, l.model, l.variant, l.type || 'Car',
                 l.year, l.km, l.fuel, l.transmission, l.ownership,
@@ -105,12 +105,12 @@ router.put('/:id', async (req, res) => {
                 l.about, l.price,
                 JSON.stringify(l.images || []),
                 l.dealerName, l.dealerPhone, l.dealerEmail, l.dealerWhatsApp,
-                l.status || 'live', l.featured ? 1 : 0,
+                l.status || 'live', l.featured ? true : false,
                 l.dealershipId || null, l.dealershipName || null,
                 req.params.id,
             ]
         );
-        const [rows] = await db.query('SELECT * FROM listings WHERE id = ?', [req.params.id]);
+        const [rows] = await db.query('SELECT * FROM listings WHERE id = $1', [req.params.id]);
         const listing = rowToListing(rows[0]);
         broadcast('listings:changed');
         res.json(listing);
@@ -122,7 +122,7 @@ router.put('/:id', async (req, res) => {
 // DELETE /api/listings/:id — delete a listing
 router.delete('/:id', async (req, res) => {
     try {
-        await db.query('DELETE FROM listings WHERE id = ?', [req.params.id]);
+        await db.query('DELETE FROM listings WHERE id = $1', [req.params.id]);
         broadcast('listings:changed');
         res.json({ success: true });
     } catch (err) {
@@ -134,10 +134,10 @@ router.delete('/:id', async (req, res) => {
 router.patch('/:id/toggle-sold', async (req, res) => {
     try {
         await db.query(
-            `UPDATE listings SET status = IF(status='sold','live','sold') WHERE id = ?`,
+            `UPDATE listings SET status = CASE WHEN status='sold' THEN 'live' ELSE 'sold' END WHERE id = $1`,
             [req.params.id]
         );
-        const [rows] = await db.query('SELECT * FROM listings WHERE id = ?', [req.params.id]);
+        const [rows] = await db.query('SELECT * FROM listings WHERE id = $1', [req.params.id]);
         const listing = rowToListing(rows[0]);
         broadcast('listings:changed');
         res.json(listing);

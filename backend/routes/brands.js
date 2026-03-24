@@ -17,14 +17,15 @@ router.post('/', async (req, res) => {
     const { name, type = 'both', logo_url = '' } = req.body;
     if (!name?.trim()) return res.status(400).json({ error: 'Brand name is required' });
     try {
-        const [result] = await db.query(
-            'INSERT INTO brands (name, type, logo_url) VALUES (?, ?, ?)',
+        // RETURNING id lets us get the auto-generated PK without result.insertId
+        const [inserted] = await db.query(
+            'INSERT INTO brands (name, type, logo_url) VALUES ($1, $2, $3) RETURNING id',
             [name.trim(), type, logo_url]
         );
-        const [rows] = await db.query('SELECT * FROM brands WHERE id = ?', [result.insertId]);
+        const [rows] = await db.query('SELECT * FROM brands WHERE id = $1', [inserted[0].id]);
         res.status(201).json(rows[0]);
     } catch (err) {
-        if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'Brand already exists' });
+        if (err.code === '23505') return res.status(409).json({ error: 'Brand already exists' });
         res.status(500).json({ error: err.message });
     }
 });
@@ -34,10 +35,10 @@ router.put('/:id', async (req, res) => {
     const { name, type, logo_url } = req.body;
     try {
         await db.query(
-            'UPDATE brands SET name = ?, type = ?, logo_url = ? WHERE id = ?',
+            'UPDATE brands SET name = $1, type = $2, logo_url = $3 WHERE id = $4',
             [name, type, logo_url || '', req.params.id]
         );
-        const [rows] = await db.query('SELECT * FROM brands WHERE id = ?', [req.params.id]);
+        const [rows] = await db.query('SELECT * FROM brands WHERE id = $1', [req.params.id]);
         res.json(rows[0]);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -47,7 +48,7 @@ router.put('/:id', async (req, res) => {
 // DELETE /api/brands/:id — delete a brand
 router.delete('/:id', async (req, res) => {
     try {
-        await db.query('DELETE FROM brands WHERE id = ?', [req.params.id]);
+        await db.query('DELETE FROM brands WHERE id = $1', [req.params.id]);
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });

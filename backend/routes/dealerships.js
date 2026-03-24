@@ -41,7 +41,7 @@ router.post('/', requireAdmin, async (req, res) => {
         const id = uuidv4();
 
         await db.query(
-            'INSERT INTO dealerships (id, name, type, address, town, city, taluk, district, state, pincode, phone, email) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
+            'INSERT INTO dealerships (id, name, type, address, town, city, taluk, district, state, pincode, phone, email) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)',
             [id, name, type, address, town, city, taluk, district, state, pincode, phone, email]
         );
 
@@ -55,14 +55,14 @@ router.post('/', requireAdmin, async (req, res) => {
 
         try {
             await db.query(
-                'INSERT INTO users (id, name, email, password_hash, role, phone) VALUES (?, ?, ?, ?, ?, ?)',
+                'INSERT INTO users (id, name, email, password_hash, role, phone) VALUES ($1, $2, $3, $4, $5, $6)',
                 [userId, name, userEmail, hash, 'dealer', phone || '']
             );
         } catch (userErr) {
             console.error('Failed to create user account for dealership:', userErr);
         }
 
-        const [rows] = await db.query('SELECT * FROM dealerships WHERE id = ?', [id]);
+        const [rows] = await db.query('SELECT * FROM dealerships WHERE id = $1', [id]);
         broadcast('dealerships:changed');
 
         const responseData = rowToDealership(rows[0]);
@@ -81,10 +81,10 @@ router.put('/:id', requireAdmin, async (req, res) => {
         const { name, type = 'drive_prime', address = '', town = '', city = '', taluk = '', district = '', state = '', pincode = '', phone = '', email = '' } = req.body;
         if (!name) return res.status(400).json({ error: 'Name is required' });
         await db.query(
-            'UPDATE dealerships SET name=?, type=?, address=?, town=?, city=?, taluk=?, district=?, state=?, pincode=?, phone=?, email=? WHERE id=?',
+            'UPDATE dealerships SET name=$1, type=$2, address=$3, town=$4, city=$5, taluk=$6, district=$7, state=$8, pincode=$9, phone=$10, email=$11 WHERE id=$12',
             [name, type, address, town, city, taluk, district, state, pincode, phone, email, req.params.id]
         );
-        const [rows] = await db.query('SELECT * FROM dealerships WHERE id = ?', [req.params.id]);
+        const [rows] = await db.query('SELECT * FROM dealerships WHERE id = $1', [req.params.id]);
         broadcast('dealerships:changed');
         res.json(rowToDealership(rows[0]));
     } catch (err) {
@@ -95,7 +95,7 @@ router.put('/:id', requireAdmin, async (req, res) => {
 // DELETE /api/dealerships/:id — admin-only, delete dealership
 router.delete('/:id', requireAdmin, async (req, res) => {
     try {
-        await db.query('DELETE FROM dealerships WHERE id = ?', [req.params.id]);
+        await db.query('DELETE FROM dealerships WHERE id = $1', [req.params.id]);
         broadcast('dealerships:changed');
         res.json({ success: true });
     } catch (err) {

@@ -1,23 +1,41 @@
 require('dotenv').config();
-const mysql = require('mysql2/promise');
+const { Pool } = require('pg');
 
-const pool = mysql.createPool({
+const pool = new Pool({
     host: process.env.DB_HOST || 'localhost',
-    port: process.env.DB_PORT || 3306,
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASS || 'LikithKeremane@01',
+    port: Number(process.env.DB_PORT) || 5432,
+    user: process.env.DB_USER || 'postgres',
+    password: process.env.DB_PASS || '',
     database: process.env.DB_NAME || 'drive_prime',
-    waitForConnections: true,
-    connectionLimit: 10,
-    // Allow large payloads (base64 images from customer submissions)
-    // Default MySQL max_allowed_packet is only 4MB which breaks multi-image uploads
-    connectTimeout: 60000,
+    max: 10,
+    idleTimeoutMillis: 60000,
 });
 
-// Bump max_allowed_packet to 64MB globally (MySQL 8+ removed session-level support for this variable)
-pool.query("SET GLOBAL max_allowed_packet = 67108864").catch(() => {
-    // Non-fatal: requires SUPER privilege. If it fails, large uploads may hit the default 4MB limit.
-    console.warn('[db] Could not set max_allowed_packet globally — large image uploads may fail.');
-});
+/**
+ * Wrapper that mimics mysql2's [rows, fields] return format so all routes
+ * can keep the same `const [rows] = await db.query(...)` destructuring pattern.
+ */
+async function query(sql, params) {
+    const result = await pool.query(sql, params);
+    return [result.rows, result];
+}
 
-module.exports = pool;
+/**
+ * Transaction helper — mimics mysql2's pool.getConnection() API.
+ * Returns a client with beginTransaction / commit / rollback / release / query.
+ */
+async function getConnection() {
+    const client = await pool.connect();
+    return {
+        query: async (sql, params) => {
+            const result = await client.query(sql, params);
+            return [result.rows, result];
+        },
+        beginTransaction: () => client.query('BEGIN'),
+        commit: () => client.query('COMMIT'),
+        rollback: () => client.query('ROLLBACK'),
+        release: () => client.release(),
+    };
+}
+
+module.exports = { query, getConnection };

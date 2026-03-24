@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FiLogOut, FiList, FiPlusCircle, FiClock, FiCheckCircle, FiXCircle, FiBarChart2, FiHome, FiTag, FiUsers, FiSettings, FiCode, FiShield, FiUser, FiKey, FiCalendar, FiMessageCircle, FiMapPin } from 'react-icons/fi';
+import { FiLogOut, FiList, FiPlusCircle, FiClock, FiCheckCircle, FiXCircle, FiBarChart2, FiHome, FiTag, FiUsers, FiSettings, FiCode, FiShield, FiUser, FiKey, FiCalendar, FiMessageCircle, FiMapPin, FiStar } from 'react-icons/fi';
 import { useStore } from '../../store/StoreContext';
 import { useAdmin } from '../../hooks/useAdmin';
 import { useFlags } from '../../context/FlagsContext';
@@ -84,6 +84,8 @@ export default function AdminDashboard() {
         { to: '/admin/add-car', icon: FiPlusCircle, label: 'Add New Car', desc: 'Create a new verified listing' },
         ...(flags.allow_customer_selling?.value ? [{ to: '/admin/review', icon: FiClock, label: 'Review Submissions', desc: `${pending} pending dealer submissions` }] : []),
         { to: '/admin/brands', icon: FiTag, label: 'Manage Brands', desc: 'Add or remove vehicle brands' },
+        { to: '/admin/banners', icon: FiHome, label: 'Homepage Banners', desc: 'Manage hero carousel slides on the homepage' },
+        { to: '/admin/carousel', icon: FiStar, label: 'Showcase Carousel', desc: 'Pick vehicles to feature in the homepage carousel' },
         { to: '/admin/users', icon: FiUsers, label: 'Manage Users', desc: 'View, create and manage all users' },
         { to: '/admin/appointments', icon: FiCalendar, label: 'Appointments', desc: 'Review and confirm viewing requests' },
         { to: '/admin/dealerships', icon: FiMapPin, label: 'Dealerships', desc: 'Manage Drive Prime & partner outlets' },
